@@ -1,79 +1,81 @@
-import Link from "next/link";
+'use client'
+
+import Link from 'next/link'
 
 const quickMenus = [
   {
-    title: "Cost Calculator",
-    subtitle: "Create costing",
-    icon: "🧮",
-    href: "/calculator",
-    bg: "#E8F7EE",
-    iconBg: "#22C55E",
+    title: 'Cost Calculator',
+    subtitle: 'Create costing',
+    icon: '🧮',
+    href: '/calculator',
+    bg: '#E8F7EE',
+    iconBg: '#22C55E',
   },
   {
-    title: "Material Setup",
-    subtitle: "Manage materials",
-    icon: "📦",
-    href: "/materials",
-    bg: "#EEF4FF",
-    iconBg: "#3B82F6",
+    title: 'Material Setup',
+    subtitle: 'Manage materials',
+    icon: '📦',
+    href: '/materials',
+    bg: '#EEF4FF',
+    iconBg: '#3B82F6',
   },
   {
-    title: "Cost Listings",
-    subtitle: "View cost items",
-    icon: "📋",
-    href: "/cost-listings",
-    bg: "#FFF4E8",
-    iconBg: "#F97316",
+    title: 'Cost Listings',
+    subtitle: 'View cost items',
+    icon: '📋',
+    href: '/cost-listings',
+    bg: '#FFF4E8',
+    iconBg: '#F97316',
   },
   {
-    title: "Approval Status",
-    subtitle: "Pending / Approved",
-    icon: "✅",
-    href: "/approvals",
-    bg: "#F3E8FF",
-    iconBg: "#A855F7",
+    title: 'Approval Status',
+    subtitle: 'Pending / Approved',
+    icon: '✅',
+    href: '/approvals',
+    bg: '#F3E8FF',
+    iconBg: '#A855F7',
   },
   {
-    title: "Activity Log",
-    subtitle: "Recent system actions",
-    icon: "🕘",
-    href: "/activity",
-    bg: "#FFF1F2",
-    iconBg: "#E11D48",
+    title: 'Activity Log',
+    subtitle: 'Recent system actions',
+    icon: '🕘',
+    href: '/activity',
+    bg: '#FFF1F2',
+    iconBg: '#E11D48',
   },
   {
-    title: "User Profile",
-    subtitle: "Account settings",
-    icon: "👤",
-    href: "/profile",
-    bg: "#ECFEFF",
-    iconBg: "#0891B2",
+    title: 'User Profile',
+    subtitle: 'Account settings',
+    icon: '👤',
+    href: '/profile',
+    bg: '#ECFEFF',
+    iconBg: '#0891B2',
   },
-];
+]
 
 const recentActivities = [
   {
-    action: "Created costing",
-    reference: "EST2609002",
-    detail: "Genting - Baccarat 2026",
-    time: "Today, 10:51 PM",
-    type: "create",
+    action: 'Created costing',
+    reference: 'EST2609002',
+    detail: 'Genting - Baccarat 2026',
+    time: 'Today, 10:51 PM',
+    type: 'create',
   },
   {
-    action: "Deleted costing",
-    reference: "EST2609001",
-    detail: "PNMY - One U",
-    time: "Today, 10:49 PM",
-    type: "delete",
+    action: 'Deleted costing',
+    reference: 'EST2609001',
+    detail: 'PNMY - One U',
+    time: 'Today, 10:49 PM',
+    type: 'delete',
   },
   {
-    action: "Approval pending",
-    reference: "EST2609003",
-    detail: "TRX Event Build",
-    time: "Today, 9:30 PM",
-    type: "pending",
+    action: 'Approval pending',
+    reference: 'EST2609003',
+    detail: 'TRX Event Build',
+    time: 'Today, 9:30 PM',
+    type: 'pending',
   },
-];
+]
 
 export default function HomePage() {
   return (
@@ -82,19 +84,32 @@ export default function HomePage() {
         <div className="heroInner">
           <div className="heroTop">
             <div>
-              <div className="welcome">Welcome back</div>
+              <div className="welcome">
+                Welcome back
+              </div>
 
-              <h1>Event Costing Dashboard</h1>
+              <h1>
+                Event Costing Dashboard
+              </h1>
 
               <p className="heroText">
-                Manage costing, materials, approvals and internal activity
+                Manage costing, materials,
+                approvals and internal activity
                 in one place
               </p>
             </div>
 
-            <Link href="/profile" className="profileButton">
-              <span className="profileIcon">👤</span>
-              <span>Admin</span>
+            <Link
+              href="/profile"
+              className="profileButton"
+            >
+              <span className="profileIcon">
+                👤
+              </span>
+
+              <span>
+                Admin
+              </span>
             </Link>
           </div>
         </div>
@@ -130,8 +145,13 @@ export default function HomePage() {
 
       <section className="contentSection">
         <div className="sectionHeader">
-          <h2>Quick Access</h2>
-          <p>Tap a module to continue</p>
+          <h2>
+            Quick Access
+          </h2>
+
+          <p>
+            Tap a module to continue
+          </p>
         </div>
 
         <div className="quickGrid">
@@ -169,47 +189,59 @@ export default function HomePage() {
         <div className="mainGrid">
           <div className="card">
             <div className="sectionHeader">
-              <h2>Recent Activity</h2>
-              <p>Latest costing actions</p>
+              <h2>
+                Recent Activity
+              </h2>
+
+              <p>
+                Latest costing actions
+              </p>
             </div>
 
             <div className="activityList">
-              {recentActivities.map((item, index) => (
-                <div
-                  key={index}
-                  className="activityRow"
-                >
-                  <div className="activityMain">
-                    <div className="activityTop">
-                      <span
-                        className={`badge badge-${item.type}`}
-                      >
-                        {item.action}
-                      </span>
+              {recentActivities.map(
+                (item, index) => (
+                  <div
+                    key={index}
+                    className="activityRow"
+                  >
+                    <div className="activityMain">
+                      <div className="activityTop">
+                        <span
+                          className={`badge badge-${item.type}`}
+                        >
+                          {item.action}
+                        </span>
 
-                      <strong>
-                        {item.reference}
-                      </strong>
+                        <strong>
+                          {item.reference}
+                        </strong>
+                      </div>
+
+                      <div className="activityDetail">
+                        {item.detail}
+                      </div>
                     </div>
 
-                    <div className="activityDetail">
-                      {item.detail}
+                    <div className="activityTime">
+                      {item.time}
                     </div>
                   </div>
-
-                  <div className="activityTime">
-                    {item.time}
-                  </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </div>
 
           <div className="sideColumn">
             <div className="card">
               <div className="sectionHeader">
-                <h2>Pending Approval</h2>
-                <p>Items waiting for action</p>
+                <h2>
+                  Pending Approval
+                </h2>
+
+                <p>
+                  Items waiting for action
+                </p>
               </div>
 
               <div className="statusList">
@@ -238,8 +270,13 @@ export default function HomePage() {
 
             <div className="card">
               <div className="sectionHeader">
-                <h2>Quick Actions</h2>
-                <p>Common shortcuts</p>
+                <h2>
+                  Quick Actions
+                </h2>
+
+                <p>
+                  Common shortcuts
+                </p>
               </div>
 
               <div className="shortcutList">
@@ -341,8 +378,18 @@ export default function HomePage() {
         .profileButton {
           text-decoration: none;
           color: white;
-          background: rgba(255, 255, 255, 0.18);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: rgba(
+            255,
+            255,
+            255,
+            0.18
+          );
+          border: 1px solid rgba(
+            255,
+            255,
+            255,
+            0.3
+          );
           border-radius: 16px;
           padding: 12px 16px;
           font-weight: 700;
@@ -375,7 +422,8 @@ export default function HomePage() {
           border-radius: 20px;
           padding: 18px;
           box-shadow:
-            0 8px 24px rgba(15, 23, 42, 0.08);
+            0 8px 24px
+            rgba(15, 23, 42, 0.08);
         }
 
         .summaryTitle {
@@ -433,9 +481,15 @@ export default function HomePage() {
           border-radius: 22px;
           padding: 18px;
           min-height: 155px;
-          border: 1px solid rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(
+            0,
+            0,
+            0,
+            0.04
+          );
           box-shadow:
-            0 6px 18px rgba(15, 23, 42, 0.06);
+            0 6px 18px
+            rgba(15, 23, 42, 0.06);
           display: block;
           transition:
             transform 0.15s ease,
@@ -473,7 +527,8 @@ export default function HomePage() {
         .mainGrid {
           display: grid;
           grid-template-columns:
-            minmax(0, 2fr) minmax(280px, 1fr);
+            minmax(0, 2fr)
+            minmax(280px, 1fr);
           gap: 20px;
           align-items: start;
         }
@@ -484,7 +539,8 @@ export default function HomePage() {
           border-radius: 22px;
           padding: 20px;
           box-shadow:
-            0 8px 24px rgba(15, 23, 42, 0.06);
+            0 8px 24px
+            rgba(15, 23, 42, 0.06);
         }
 
         .sideColumn {
@@ -501,7 +557,8 @@ export default function HomePage() {
           justify-content: space-between;
           gap: 14px;
           padding: 15px 0;
-          border-bottom: 1px solid #e5e7eb;
+          border-bottom:
+            1px solid #e5e7eb;
         }
 
         .activityRow:last-child {
@@ -590,7 +647,8 @@ export default function HomePage() {
           text-decoration: none;
           color: #111827;
           background: #f9fafb;
-          border: 1px solid #e5e7eb;
+          border:
+            1px solid #e5e7eb;
           padding: 14px 16px;
           border-radius: 14px;
           font-weight: 600;
@@ -699,7 +757,7 @@ export default function HomePage() {
         }
       `}</style>
     </main>
-  );
+  )
 }
 
 function SummaryCard({
@@ -707,9 +765,9 @@ function SummaryCard({
   value,
   sub,
 }: {
-  title: string;
-  value: string;
-  sub: string;
+  title: string
+  value: string
+  sub: string
 }) {
   return (
     <div className="summaryCard">
@@ -725,7 +783,7 @@ function SummaryCard({
         {sub}
       </div>
     </div>
-  );
+  )
 }
 
 function MiniStatusCard({
@@ -734,10 +792,10 @@ function MiniStatusCard({
   status,
   color,
 }: {
-  code: string;
-  project: string;
-  status: string;
-  color: string;
+  code: string
+  project: string
+  status: string
+  color: string
 }) {
   return (
     <div className="miniStatus">
@@ -759,15 +817,15 @@ function MiniStatusCard({
         {status}
       </span>
     </div>
-  );
+  )
 }
 
 function QuickActionButton({
   href,
   label,
 }: {
-  href: string;
-  label: string;
+  href: string
+  label: string
 }) {
   return (
     <Link
@@ -776,5 +834,5 @@ function QuickActionButton({
     >
       {label}
     </Link>
-  );
+  )
 }

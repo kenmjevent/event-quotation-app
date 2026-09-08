@@ -105,7 +105,6 @@ export default function QuotationsPage() {
 
     if (!confirmed) return
 
-    // 先记录 log，避免 quotation 删除后资料也找不到
     await writeLog(
       id,
       quotationNo,
@@ -144,7 +143,7 @@ export default function QuotationsPage() {
     })
   }
 
-  function actionBadge(action: string) {
+  function getActionStyle(action: string) {
     const upper = action.toUpperCase()
 
     if (upper === 'DELETE') {
@@ -169,318 +168,763 @@ export default function QuotationsPage() {
     }
 
     return {
-      background: '#eee',
-      color: '#333'
+      background: '#eeeeee',
+      color: '#333333'
+    }
+  }
+
+  function getStatusStyle(status: string) {
+    const lower = (status || '').toLowerCase()
+
+    if (lower === 'approved') {
+      return {
+        background: '#dcfce7',
+        color: '#166534'
+      }
+    }
+
+    if (lower === 'sent') {
+      return {
+        background: '#dbeafe',
+        color: '#1d4ed8'
+      }
+    }
+
+    if (lower === 'rejected') {
+      return {
+        background: '#fee2e2',
+        color: '#991b1b'
+      }
+    }
+
+    return {
+      background: '#f3f4f6',
+      color: '#374151'
     }
   }
 
   return (
-    <main
-      style={{
-        maxWidth: '1300px',
-        margin: '0 auto',
-        padding: '40px',
-        fontFamily: 'Arial'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '30px'
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: '5px' }}>
-            All Quotations
-          </h1>
-
-          <p style={{ color: '#666', marginTop: 0 }}>
-            Saved quotation history
-          </p>
-        </div>
-
-        <Link
-          href="/"
-          style={{
-            padding: '12px 18px',
-            border: '1px solid #222',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            color: '#000'
-          }}
-        >
-          + New Quotation
-        </Link>
-      </div>
-
-      {loading && <p>Loading quotations...</p>}
-
-      {errorMessage && (
-        <p style={{ color: 'red' }}>
-          Error: {errorMessage}
-        </p>
-      )}
-
-      {!loading &&
-        !errorMessage &&
-        quotations.length > 0 && (
-          <div
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: '12px',
-              overflow: 'hidden'
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns:
-                  '1.2fr 1.4fr 1.8fr 1fr 1.2fr 0.8fr 0.8fr 1.5fr',
-                gap: '10px',
-                padding: '15px',
-                background: '#f5f5f5',
-                fontWeight: 'bold'
-              }}
-            >
-              <div>Quotation No.</div>
-              <div>Customer</div>
-              <div>Project</div>
-              <div>Date</div>
-              <div>Selling Price</div>
-              <div>Margin</div>
-              <div>Status</div>
-              <div>Actions</div>
-            </div>
-
-            {quotations.map((quotation) => (
-              <div
-                key={quotation.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    '1.2fr 1.4fr 1.8fr 1fr 1.2fr 0.8fr 0.8fr 1.5fr',
-                  gap: '10px',
-                  padding: '15px',
-                  borderTop: '1px solid #eee',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <strong>
-                    {quotation.quotation_no || '-'}
-                  </strong>
-                </div>
-
-                <div>
-                  {quotation.customer_name || '-'}
-                </div>
-
-                <div>
-                  {quotation.project_name || '-'}
-                </div>
-
-                <div>
-                  {quotation.quotation_date || '-'}
-                </div>
-
-                <div>
-                  {formatRM(quotation.selling_price)}
-                </div>
-
-                <div>
-                  {Number(
-                    quotation.gross_margin || 0
-                  ).toFixed(2)}
-                  %
-                </div>
-
-                <div
-                  style={{
-                    textTransform: 'capitalize'
-                  }}
-                >
-                  {quotation.status || 'draft'}
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '8px'
-                  }}
-                >
-                  <Link
-                    href={`/quotations/${quotation.id}`}
-                    style={actionButton}
-                  >
-                    View
-                  </Link>
-
-                  <Link
-                    href={`/quotations/${quotation.id}/edit`}
-                    style={actionButton}
-                  >
-                    Edit
-                  </Link>
-
-                  <button
-                    onClick={() =>
-                      deleteQuotation(
-                        quotation.id,
-                        quotation.quotation_no,
-                        quotation.customer_name,
-                        quotation.project_name
-                      )
-                    }
-                    style={{
-                      ...actionButton,
-                      background: '#fff',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      {!loading &&
-        !errorMessage &&
-        quotations.length === 0 && (
-          <div
-            style={{
-              padding: '30px',
-              border: '1px solid #ddd',
-              borderRadius: '10px'
-            }}
-          >
-            No quotations found.
-          </div>
-        )}
-
-      <div
-        style={{
-          marginTop: '45px'
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
+    <main style={pageStyle}>
+      <div style={containerStyle}>
+        <div style={headerStyle}>
           <div>
-            <h2 style={{ marginBottom: '5px' }}>
-              Activity Log
-            </h2>
+            <h1 style={titleStyle}>All Quotations</h1>
 
-            <p style={{ color: '#666', marginTop: 0 }}>
-              Recent quotation activities
+            <p style={subtitleStyle}>
+              Saved quotation history
             </p>
           </div>
 
-          <button
-            onClick={loadLogs}
-            style={{
-              padding: '9px 14px',
-              cursor: 'pointer'
-            }}
+          <Link
+            href="/"
+            style={newQuotationButton}
           >
-            Refresh Log
-          </button>
+            + New Quotation
+          </Link>
         </div>
 
-        <div
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            marginTop: '15px'
-          }}
-        >
+        {loading && (
+          <div style={messageBoxStyle}>
+            Loading quotations...
+          </div>
+        )}
+
+        {errorMessage && (
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1.2fr 0.8fr 1.2fr 3fr 1fr',
-              gap: '10px',
-              padding: '14px',
-              background: '#f5f5f5',
-              fontWeight: 'bold'
+              ...messageBoxStyle,
+              color: '#b91c1c'
             }}
           >
-            <div>Date / Time</div>
-            <div>Action</div>
-            <div>Quotation</div>
-            <div>Details</div>
-            <div>User</div>
+            Error: {errorMessage}
           </div>
+        )}
 
-          {logs.length === 0 && (
-            <div style={{ padding: '20px' }}>
-              No activity yet.
+        {!loading &&
+          !errorMessage &&
+          quotations.length === 0 && (
+            <div style={messageBoxStyle}>
+              No quotations found.
             </div>
           )}
 
-          {logs.map((log) => (
-            <div
-              key={log.id}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1.2fr 0.8fr 1.2fr 3fr 1fr',
-                gap: '10px',
-                padding: '14px',
-                borderTop: '1px solid #eee',
-                alignItems: 'center'
-              }}
-            >
-              <div>
-                {formatDateTime(log.created_at)}
+        {!loading &&
+          !errorMessage &&
+          quotations.length > 0 && (
+            <>
+              {/* DESKTOP TABLE */}
+              <div className="desktopOnly">
+                <div style={tableWrapperStyle}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={tableHeaderRowStyle}>
+                        <th style={thStyle}>Quotation No.</th>
+                        <th style={thStyle}>Customer</th>
+                        <th style={thStyle}>Project</th>
+                        <th style={thStyle}>Date</th>
+                        <th style={thStyle}>Selling Price</th>
+                        <th style={thStyle}>Margin</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Actions</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {quotations.map((quotation) => (
+                        <tr
+                          key={quotation.id}
+                          style={tableRowStyle}
+                        >
+                          <td style={tdStyle}>
+                            <strong>
+                              {quotation.quotation_no}
+                            </strong>
+                          </td>
+
+                          <td style={tdStyle}>
+                            {quotation.customer_name || '-'}
+                          </td>
+
+                          <td style={tdStyle}>
+                            {quotation.project_name || '-'}
+                          </td>
+
+                          <td style={tdStyle}>
+                            {quotation.quotation_date || '-'}
+                          </td>
+
+                          <td style={tdStyle}>
+                            {formatRM(quotation.selling_price)}
+                          </td>
+
+                          <td style={tdStyle}>
+                            {Number(
+                              quotation.gross_margin || 0
+                            ).toFixed(2)}
+                            %
+                          </td>
+
+                          <td style={tdStyle}>
+                            <span
+                              style={{
+                                ...statusBadgeStyle,
+                                ...getStatusStyle(
+                                  quotation.status
+                                )
+                              }}
+                            >
+                              {quotation.status || 'draft'}
+                            </span>
+                          </td>
+
+                          <td style={tdStyle}>
+                            <div style={actionRowStyle}>
+                              <Link
+                                href={`/quotations/${quotation.id}`}
+                                style={smallButtonStyle}
+                              >
+                                View
+                              </Link>
+
+                              <Link
+                                href={`/quotations/${quotation.id}/edit`}
+                                style={smallButtonStyle}
+                              >
+                                Edit
+                              </Link>
+
+                              <button
+                                onClick={() =>
+                                  deleteQuotation(
+                                    quotation.id,
+                                    quotation.quotation_no,
+                                    quotation.customer_name,
+                                    quotation.project_name
+                                  )
+                                }
+                                style={deleteButtonStyle}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <div>
-                <span
-                  style={{
-                    ...actionBadge(log.action),
-                    padding: '5px 9px',
-                    borderRadius: '999px',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  {log.action}
-                </span>
-              </div>
+              {/* MOBILE CARDS */}
+              <div className="mobileOnly">
+                <div style={mobileCardListStyle}>
+                  {quotations.map((quotation) => (
+                    <div
+                      key={quotation.id}
+                      style={mobileCardStyle}
+                    >
+                      <div style={mobileCardTopStyle}>
+                        <div>
+                          <div style={smallLabelStyle}>
+                            Quotation No.
+                          </div>
 
-              <div>
-                <strong>
-                  {log.quotation_no}
-                </strong>
-              </div>
+                          <div style={quotationNoStyle}>
+                            {quotation.quotation_no}
+                          </div>
+                        </div>
 
-              <div>
-                {log.details || '-'}
-              </div>
+                        <span
+                          style={{
+                            ...statusBadgeStyle,
+                            ...getStatusStyle(
+                              quotation.status
+                            )
+                          }}
+                        >
+                          {quotation.status || 'draft'}
+                        </span>
+                      </div>
 
-              <div>
-                {log.performed_by || '-'}
+                      <div style={mobileInfoGridStyle}>
+                        <MobileInfo
+                          label="Customer"
+                          value={quotation.customer_name}
+                        />
+
+                        <MobileInfo
+                          label="Project"
+                          value={quotation.project_name}
+                        />
+
+                        <MobileInfo
+                          label="Date"
+                          value={quotation.quotation_date}
+                        />
+
+                        <MobileInfo
+                          label="Margin"
+                          value={`${Number(
+                            quotation.gross_margin || 0
+                          ).toFixed(2)}%`}
+                        />
+                      </div>
+
+                      <div style={sellingPriceBoxStyle}>
+                        <div style={smallLabelStyle}>
+                          Selling Price
+                        </div>
+
+                        <div style={sellingPriceStyle}>
+                          {formatRM(
+                            quotation.selling_price
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={mobileActionGridStyle}>
+                        <Link
+                          href={`/quotations/${quotation.id}`}
+                          style={mobileActionButtonStyle}
+                        >
+                          View
+                        </Link>
+
+                        <Link
+                          href={`/quotations/${quotation.id}/edit`}
+                          style={mobileActionButtonStyle}
+                        >
+                          Edit
+                        </Link>
+
+                        <button
+                          onClick={() =>
+                            deleteQuotation(
+                              quotation.id,
+                              quotation.quotation_no,
+                              quotation.customer_name,
+                              quotation.project_name
+                            )
+                          }
+                          style={mobileDeleteButtonStyle}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            </>
+          )}
+
+        <div style={logSectionStyle}>
+          <div style={logHeaderStyle}>
+            <div>
+              <h2 style={sectionTitleStyle}>
+                Activity Log
+              </h2>
+
+              <p style={subtitleStyle}>
+                Recent quotation activities
+              </p>
             </div>
-          ))}
+
+            <button
+              onClick={loadLogs}
+              style={refreshButtonStyle}
+            >
+              Refresh Log
+            </button>
+          </div>
+
+          {/* DESKTOP LOG TABLE */}
+          <div className="desktopOnly">
+            <div style={tableWrapperStyle}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr style={tableHeaderRowStyle}>
+                    <th style={thStyle}>Date / Time</th>
+                    <th style={thStyle}>Action</th>
+                    <th style={thStyle}>Quotation</th>
+                    <th style={thStyle}>Details</th>
+                    <th style={thStyle}>User</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {logs.length === 0 && (
+                    <tr>
+                      <td
+                        style={tdStyle}
+                        colSpan={5}
+                      >
+                        No activity yet.
+                      </td>
+                    </tr>
+                  )}
+
+                  {logs.map((log) => (
+                    <tr
+                      key={log.id}
+                      style={tableRowStyle}
+                    >
+                      <td style={tdStyle}>
+                        {formatDateTime(log.created_at)}
+                      </td>
+
+                      <td style={tdStyle}>
+                        <span
+                          style={{
+                            ...actionBadgeStyle,
+                            ...getActionStyle(log.action)
+                          }}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+
+                      <td style={tdStyle}>
+                        <strong>
+                          {log.quotation_no}
+                        </strong>
+                      </td>
+
+                      <td style={tdStyle}>
+                        {log.details || '-'}
+                      </td>
+
+                      <td style={tdStyle}>
+                        {log.performed_by || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* MOBILE LOG CARDS */}
+          <div className="mobileOnly">
+            <div style={mobileCardListStyle}>
+              {logs.length === 0 && (
+                <div style={messageBoxStyle}>
+                  No activity yet.
+                </div>
+              )}
+
+              {logs.map((log) => (
+                <div
+                  key={log.id}
+                  style={mobileLogCardStyle}
+                >
+                  <div style={mobileCardTopStyle}>
+                    <div>
+                      <div style={smallLabelStyle}>
+                        Quotation
+                      </div>
+
+                      <div style={quotationNoStyle}>
+                        {log.quotation_no}
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        ...actionBadgeStyle,
+                        ...getActionStyle(log.action)
+                      }}
+                    >
+                      {log.action}
+                    </span>
+                  </div>
+
+                  <div style={logMobileDetailsStyle}>
+                    <div>
+                      <span style={smallLabelStyle}>
+                        Date / Time
+                      </span>
+
+                      <div style={mobileValueStyle}>
+                        {formatDateTime(
+                          log.created_at
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={smallLabelStyle}>
+                        Details
+                      </span>
+
+                      <div style={mobileValueStyle}>
+                        {log.details || '-'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={smallLabelStyle}>
+                        User
+                      </span>
+
+                      <div style={mobileValueStyle}>
+                        {log.performed_by || '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        .desktopOnly {
+          display: block;
+        }
+
+        .mobileOnly {
+          display: none;
+        }
+
+        @media (max-width: 767px) {
+          .desktopOnly {
+            display: none;
+          }
+
+          .mobileOnly {
+            display: block;
+          }
+
+          body {
+            overflow-x: hidden;
+          }
+        }
+      `}</style>
     </main>
   )
 }
 
-const actionButton = {
-  padding: '7px 10px',
-  border: '1px solid #ccc',
-  borderRadius: '6px',
+function MobileInfo({
+  label,
+  value
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div>
+      <div style={smallLabelStyle}>
+        {label}
+      </div>
+
+      <div style={mobileValueStyle}>
+        {value || '-'}
+      </div>
+    </div>
+  )
+}
+
+const pageStyle = {
+  minHeight: '100vh',
+  background: '#f7f8fa',
+  fontFamily: 'Arial, sans-serif'
+}
+
+const containerStyle = {
+  width: '100%',
+  maxWidth: '1280px',
+  margin: '0 auto',
+  padding: '32px 20px 60px',
+  boxSizing: 'border-box' as const
+}
+
+const headerStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '16px',
+  flexWrap: 'wrap' as const,
+  marginBottom: '28px'
+}
+
+const titleStyle = {
+  margin: 0,
+  fontSize: '32px',
+  lineHeight: 1.2
+}
+
+const sectionTitleStyle = {
+  margin: 0,
+  fontSize: '24px'
+}
+
+const subtitleStyle = {
+  color: '#6b7280',
+  marginTop: '6px',
+  marginBottom: 0
+}
+
+const newQuotationButton = {
+  display: 'inline-flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: '46px',
+  padding: '0 18px',
+  border: '1px solid #222',
+  borderRadius: '10px',
   textDecoration: 'none',
-  color: '#000',
-  fontSize: '13px'
+  color: '#111',
+  background: '#fff',
+  fontWeight: 600
+}
+
+const messageBoxStyle = {
+  background: '#fff',
+  border: '1px solid #e5e7eb',
+  borderRadius: '12px',
+  padding: '22px'
+}
+
+const tableWrapperStyle = {
+  background: '#fff',
+  border: '1px solid #e5e7eb',
+  borderRadius: '14px',
+  overflowX: 'auto' as const
+}
+
+const tableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse' as const,
+  minWidth: '1000px'
+}
+
+const tableHeaderRowStyle = {
+  background: '#f3f4f6'
+}
+
+const tableRowStyle = {
+  borderTop: '1px solid #e5e7eb'
+}
+
+const thStyle = {
+  textAlign: 'left' as const,
+  padding: '15px',
+  fontSize: '14px'
+}
+
+const tdStyle = {
+  padding: '15px',
+  fontSize: '14px',
+  verticalAlign: 'middle' as const
+}
+
+const actionRowStyle = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap' as const
+}
+
+const smallButtonStyle = {
+  border: '1px solid #d1d5db',
+  borderRadius: '8px',
+  padding: '8px 11px',
+  textDecoration: 'none',
+  color: '#111',
+  background: '#fff'
+}
+
+const deleteButtonStyle = {
+  border: '1px solid #fecaca',
+  borderRadius: '8px',
+  padding: '8px 11px',
+  color: '#b91c1c',
+  background: '#fff',
+  cursor: 'pointer'
+}
+
+const statusBadgeStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '5px 10px',
+  borderRadius: '999px',
+  fontSize: '12px',
+  fontWeight: 700,
+  textTransform: 'capitalize' as const
+}
+
+const actionBadgeStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '5px 10px',
+  borderRadius: '999px',
+  fontSize: '12px',
+  fontWeight: 700
+}
+
+const mobileCardListStyle = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '14px'
+}
+
+const mobileCardStyle = {
+  background: '#fff',
+  border: '1px solid #e5e7eb',
+  borderRadius: '16px',
+  padding: '18px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+}
+
+const mobileLogCardStyle = {
+  background: '#fff',
+  border: '1px solid #e5e7eb',
+  borderRadius: '16px',
+  padding: '18px'
+}
+
+const mobileCardTopStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: '12px'
+}
+
+const quotationNoStyle = {
+  fontSize: '18px',
+  fontWeight: 700,
+  marginTop: '3px'
+}
+
+const smallLabelStyle = {
+  color: '#6b7280',
+  fontSize: '12px',
+  lineHeight: 1.4
+}
+
+const mobileValueStyle = {
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: 500,
+  marginTop: '4px',
+  wordBreak: 'break-word' as const
+}
+
+const mobileInfoGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '16px 12px',
+  marginTop: '20px'
+}
+
+const sellingPriceBoxStyle = {
+  marginTop: '18px',
+  padding: '14px',
+  background: '#f9fafb',
+  borderRadius: '12px'
+}
+
+const sellingPriceStyle = {
+  marginTop: '4px',
+  fontSize: '20px',
+  fontWeight: 700
+}
+
+const mobileActionGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: '8px',
+  marginTop: '18px'
+}
+
+const mobileActionButtonStyle = {
+  textAlign: 'center' as const,
+  border: '1px solid #d1d5db',
+  borderRadius: '10px',
+  padding: '10px 6px',
+  textDecoration: 'none',
+  color: '#111',
+  background: '#fff',
+  fontSize: '14px'
+}
+
+const mobileDeleteButtonStyle = {
+  border: '1px solid #fecaca',
+  borderRadius: '10px',
+  padding: '10px 6px',
+  color: '#b91c1c',
+  background: '#fff',
+  fontSize: '14px',
+  cursor: 'pointer'
+}
+
+const logSectionStyle = {
+  marginTop: '42px'
+}
+
+const logHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '14px',
+  flexWrap: 'wrap' as const,
+  marginBottom: '16px'
+}
+
+const refreshButtonStyle = {
+  border: '1px solid #d1d5db',
+  borderRadius: '8px',
+  padding: '9px 13px',
+  background: '#fff',
+  cursor: 'pointer'
+}
+
+const logMobileDetailsStyle = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '14px',
+  marginTop: '18px'
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 
 type Material = {
@@ -125,10 +126,7 @@ export default function Home() {
       .limit(1)
 
     if (error) {
-      console.error(
-        'Quotation number error:',
-        error
-      )
+      console.error('Quotation number error:', error)
       return
     }
 
@@ -527,28 +525,27 @@ export default function Home() {
             'draft',
 
           target_margin:
-            Number(
-              targetMargin
-            ) || 0,
+            Number(targetMargin) || 0,
 
           material_cost:
             totals.totalMaterialCost,
 
           labour_cost:
-            Number(
-              labourCost
-            ) || 0,
+            Number(labourCost) || 0,
+
+          transport_cost:
+            Number(transportCost) || 0,
+
+          installation_cost:
+            Number(installationCost) || 0,
+
+          dismantling_cost:
+            Number(dismantlingCost) || 0,
 
           logistics_cost:
-            (Number(
-              transportCost
-            ) || 0) +
-            (Number(
-              installationCost
-            ) || 0) +
-            (Number(
-              dismantlingCost
-            ) || 0),
+            (Number(transportCost) || 0) +
+            (Number(installationCost) || 0) +
+            (Number(dismantlingCost) || 0),
 
           total_cost:
             totals.totalCost,
@@ -635,7 +632,6 @@ export default function Home() {
       const savedNo =
         quotationNo
 
-      // CREATE ACTIVITY LOG
       const {
         error: logError
       } = await supabase
@@ -702,36 +698,25 @@ export default function Home() {
   return (
     <main style={mainStyle}>
       <div
-        style={{
-          display: 'flex',
-          justifyContent:
-            'space-between',
-          alignItems:
-            'center'
-        }}
+        className="mobile-header"
+        style={headerStyle}
       >
         <div>
-          <h1>
+          <h1 style={pageTitleStyle}>
             Event Quotation Calculator
           </h1>
 
-          <p
-            style={{
-              color: '#666'
-            }}
-          >
-            Multi-item /
-            Multi-material Costing
-            System
+          <p style={pageSubtitleStyle}>
+            Multi-item / Multi-material Costing System
           </p>
         </div>
 
-        <a
+        <Link
           href="/quotations"
           style={navButtonStyle}
         >
           View Quotations
-        </a>
+        </Link>
       </div>
 
       <div
@@ -742,6 +727,7 @@ export default function Home() {
         </h2>
 
         <div
+          className="mobile-grid"
           style={gridStyle}
         >
           <div>
@@ -839,9 +825,7 @@ export default function Home() {
             color: 'red'
           }}
         >
-          Error:
-          {' '}
-          {errorMessage}
+          Error: {errorMessage}
         </p>
       )}
 
@@ -866,6 +850,7 @@ export default function Home() {
                   }
                 >
                   <div
+                    className="mobile-header"
                     style={
                       topRowStyle
                     }
@@ -886,6 +871,7 @@ export default function Home() {
                         items.length ===
                         1
                       }
+                      style={secondaryButtonStyle}
                     >
                       Remove Item
                     </button>
@@ -947,6 +933,7 @@ export default function Home() {
                           }
                         >
                           <div
+                            className="mobile-header"
                             style={
                               topRowStyle
                             }
@@ -970,6 +957,7 @@ export default function Home() {
                                   .length ===
                                 1
                               }
+                              style={secondaryButtonStyle}
                             >
                               Remove
                             </button>
@@ -1025,6 +1013,7 @@ export default function Home() {
 
                           {isArea && (
                             <div
+                              className="mobile-grid"
                               style={
                                 gridStyle
                               }
@@ -1211,8 +1200,7 @@ export default function Home() {
                         '18px'
                     }}
                   >
-                    Item Material
-                    Total:
+                    Item Material Total:
                     {' '}
                     RM
                     {calculateItemTotal(
@@ -1244,6 +1232,7 @@ export default function Home() {
               </h2>
 
               <div
+                className="mobile-grid"
                 style={
                   gridStyle
                 }
@@ -1302,7 +1291,7 @@ export default function Home() {
               <div
                 style={{
                   maxWidth:
-                    '300px'
+                    '320px'
                 }}
               >
                 <label>
@@ -1438,7 +1427,8 @@ export default function Home() {
                   marginTop:
                     '25px',
                   fontSize:
-                    '16px'
+                    '16px',
+                  width: '100%'
                 }}
               >
                 {saving
@@ -1452,7 +1442,9 @@ export default function Home() {
                     marginTop:
                       '15px',
                     fontWeight:
-                      'bold'
+                      'bold',
+                    wordBreak:
+                      'break-word'
                   }}
                 >
                   {
@@ -1463,89 +1455,197 @@ export default function Home() {
             </div>
           </>
         )}
+
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        @media (max-width: 767px) {
+          main {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 18px 14px 40px !important;
+          }
+
+          .mobile-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .mobile-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+
+          .mobile-header > * {
+            width: 100% !important;
+          }
+
+          input,
+          select,
+          button,
+          a {
+            max-width: 100% !important;
+          }
+
+          h1 {
+            font-size: 28px !important;
+            line-height: 1.2 !important;
+          }
+
+          h2 {
+            font-size: 22px !important;
+          }
+
+          h3 {
+            font-size: 18px !important;
+          }
+        }
+      `}</style>
     </main>
   )
 }
 
 const mainStyle = {
-  padding: '40px',
+  padding: '40px 24px',
   maxWidth: '1200px',
   margin: '0 auto',
-  fontFamily: 'Arial'
+  fontFamily: 'Arial, sans-serif',
+  width: '100%'
+}
+
+const headerStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '16px',
+  marginBottom: '30px'
+}
+
+const pageTitleStyle = {
+  margin: 0,
+  fontSize: '34px',
+  lineHeight: 1.2
+}
+
+const pageSubtitleStyle = {
+  color: '#666',
+  marginTop: '8px',
+  marginBottom: 0,
+  lineHeight: 1.5
 }
 
 const inputStyle = {
   width: '100%',
+  minWidth: 0,
   padding: '12px',
   marginTop: '8px',
   marginBottom: '12px',
   border: '1px solid #ccc',
-  borderRadius: '6px',
+  borderRadius: '8px',
   boxSizing:
-    'border-box' as const
+    'border-box' as const,
+  fontSize: '16px'
 }
 
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns:
-    'repeat(2, 1fr)',
-  gap: '20px'
+    'repeat(2, minmax(0, 1fr))',
+  gap: '20px',
+  width: '100%'
 }
 
 const sectionStyle = {
   marginTop: '30px',
   marginBottom: '30px',
-  padding: '25px',
+  padding: '24px',
   border: '1px solid #ddd',
-  borderRadius: '12px'
+  borderRadius: '14px',
+  width: '100%',
+  overflow: 'hidden'
 }
 
 const itemStyle = {
   border: '2px solid #222',
   borderRadius: '14px',
-  padding: '25px',
-  marginBottom: '30px'
+  padding: '24px',
+  marginBottom: '30px',
+  width: '100%',
+  overflow: 'hidden'
 }
 
 const materialBoxStyle = {
   border: '1px solid #ddd',
   borderRadius: '10px',
   padding: '18px',
-  marginBottom: '15px'
+  marginBottom: '15px',
+  width: '100%',
+  overflow: 'hidden'
 }
 
 const resultBoxStyle = {
   marginTop: '15px',
   background: '#f5f5f5',
   padding: '12px',
-  borderRadius: '8px'
+  borderRadius: '8px',
+  lineHeight: 1.7
 }
 
 const topRowStyle = {
   display: 'flex',
   justifyContent:
     'space-between',
-  alignItems: 'center'
+  alignItems: 'center',
+  gap: '12px'
 }
 
 const buttonStyle = {
-  padding: '10px 16px',
-  cursor: 'pointer'
+  padding: '11px 16px',
+  cursor: 'pointer',
+  border: '1px solid #aaa',
+  borderRadius: '8px',
+  background: '#fff'
+}
+
+const secondaryButtonStyle = {
+  padding: '9px 12px',
+  cursor: 'pointer',
+  border: '1px solid #ccc',
+  borderRadius: '8px',
+  background: '#fff'
 }
 
 const navButtonStyle = {
-  padding: '11px 16px',
+  padding: '12px 18px',
   border: '1px solid #222',
-  borderRadius: '8px',
+  borderRadius: '10px',
   color: '#000',
-  textDecoration: 'none'
+  textDecoration: 'none',
+  background: '#fff',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '46px'
 }
 
 const summaryStyle = {
   marginTop: '35px',
   border: '2px solid #222',
   borderRadius: '12px',
-  padding: '25px'
+  padding: '24px',
+  width: '100%',
+  overflow: 'hidden'
 }
 
 const marginBoxStyle = {
@@ -1604,12 +1704,14 @@ function SummaryRow({
         display: 'flex',
         justifyContent:
           'space-between',
+        gap: '16px',
         marginBottom:
           '12px',
         fontWeight:
           bold
             ? 'bold'
-            : 'normal'
+            : 'normal',
+        flexWrap: 'wrap'
       }}
     >
       <span>

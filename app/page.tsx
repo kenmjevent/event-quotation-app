@@ -1,6 +1,26 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { supabase } from '../lib/supabase'
+
+type ActivityLog = {
+  id: string
+  quotation_no: string
+  action: string
+  details: string | null
+  performed_by: string | null
+  created_at: string
+}
+
+type ApprovalItem = {
+  id: string
+  quotation_no: string
+  customer_name: string | null
+  project_name: string | null
+  status: string
+  created_at: string
+}
 
 const quickMenus = [
   {
@@ -53,52 +73,153 @@ const quickMenus = [
   },
 ]
 
-const recentActivities = [
-  {
-    action: 'Created costing',
-    reference: 'EST2609002',
-    detail: 'Genting - Baccarat 2026',
-    time: '10:51 PM',
-    type: 'create',
-  },
-  {
-    action: 'Deleted costing',
-    reference: 'EST2609001',
-    detail: 'PNMY - One U',
-    time: '10:49 PM',
-    type: 'delete',
-  },
-  {
-    action: 'Approval pending',
-    reference: 'EST2609003',
-    detail: 'TRX Event Build',
-    time: '9:30 PM',
-    type: 'pending',
-  },
-]
-
-const approvals = [
-  {
-    code: 'EST2609003',
-    project: 'TRX Event Build',
-    status: 'Pending',
-    color: '#F59E0B',
-  },
-  {
-    code: 'EST2609004',
-    project: 'Mooncake Booth',
-    status: 'Approved',
-    color: '#10B981',
-  },
-]
-
 export default function HomePage() {
+  const [totalCostings, setTotalCostings] = useState(0)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [materialsCount, setMaterialsCount] = useState(0)
+  const [draftCount, setDraftCount] = useState(0)
+
+  const [activities, setActivities] = useState<ActivityLog[]>([])
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([])
+
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    loadDashboard()
+  }, [])
+
+  async function loadDashboard() {
+    setLoading(true)
+    setErrorMessage('')
+
+    try {
+      const [
+        totalResult,
+        pendingResult,
+        materialsResult,
+        draftResult,
+        activityResult,
+        approvalResult,
+      ] = await Promise.all([
+        supabase
+          .from('quotations')
+          .select('*', {
+            count: 'exact',
+            head: true,
+          }),
+
+        supabase
+          .from('quotations')
+          .select('*', {
+            count: 'exact',
+            head: true,
+          })
+          .eq('status', 'pending'),
+
+        supabase
+          .from('materials')
+          .select('*', {
+            count: 'exact',
+            head: true,
+          })
+          .eq('is_active', true),
+
+        supabase
+          .from('quotations')
+          .select('*', {
+            count: 'exact',
+            head: true,
+          })
+          .eq('status', 'draft'),
+
+        supabase
+          .from('quotation_logs')
+          .select(
+            'id, quotation_no, action, details, performed_by, created_at'
+          )
+          .order('created_at', {
+            ascending: false,
+          })
+          .limit(3),
+
+        supabase
+          .from('quotations')
+          .select(
+            'id, quotation_no, customer_name, project_name, status, created_at'
+          )
+          .in('status', ['pending', 'approved'])
+          .order('created_at', {
+            ascending: false,
+          })
+          .limit(2),
+      ])
+
+      if (totalResult.error) throw totalResult.error
+      if (pendingResult.error) throw pendingResult.error
+      if (materialsResult.error) throw materialsResult.error
+      if (draftResult.error) throw draftResult.error
+      if (activityResult.error) throw activityResult.error
+      if (approvalResult.error) throw approvalResult.error
+
+      setTotalCostings(totalResult.count || 0)
+      setPendingCount(pendingResult.count || 0)
+      setMaterialsCount(materialsResult.count || 0)
+      setDraftCount(draftResult.count || 0)
+
+      setActivities(activityResult.data || [])
+      setApprovals(approvalResult.data || [])
+    } catch (error: any) {
+      console.error('Dashboard load error:', error)
+
+      setErrorMessage(
+        error?.message || 'Unable to load dashboard data.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function formatTime(value: string) {
+    return new Date(value).toLocaleTimeString('en-MY', {
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  }
+
+  function getActivityType(action: string) {
+    const value = action.toLowerCase()
+
+    if (value === 'delete') return 'delete'
+    if (value === 'edit' || value === 'update') return 'edit'
+    if (value === 'approve' || value === 'approved') return 'approved'
+    if (value === 'pending') return 'pending'
+
+    return 'create'
+  }
+
+  function getActivityLabel(action: string) {
+    const value = action.toUpperCase()
+
+    if (value === 'CREATE') return 'Created'
+    if (value === 'DELETE') return 'Deleted'
+    if (value === 'EDIT') return 'Edited'
+    if (value === 'UPDATE') return 'Updated'
+    if (value === 'APPROVED') return 'Approved'
+    if (value === 'PENDING') return 'Pending'
+
+    return value
+  }
+
   return (
     <main className="page">
+      {/* HEADER */}
       <section className="hero">
         <div className="heroInner">
           <div>
-            <div className="welcome">Welcome back</div>
+            <div className="welcome">
+              Welcome back
+            </div>
 
             <h1>Event Costing</h1>
 
@@ -116,39 +237,75 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* SUMMARY */}
       <section className="summarySection">
         <div className="summaryGrid">
           <SummaryCard
             title="Costings"
-            value="128"
-            sub="This month"
+            value={
+              loading
+                ? '...'
+                : String(totalCostings)
+            }
+            sub="Total records"
           />
 
           <SummaryCard
             title="Pending"
-            value="7"
+            value={
+              loading
+                ? '...'
+                : String(pendingCount)
+            }
             sub="Need approval"
           />
 
           <SummaryCard
             title="Materials"
-            value="86"
+            value={
+              loading
+                ? '...'
+                : String(materialsCount)
+            }
             sub="Active"
           />
 
           <SummaryCard
             title="Drafts"
-            value="12"
+            value={
+              loading
+                ? '...'
+                : String(draftCount)
+            }
             sub="In progress"
           />
         </div>
       </section>
 
+      {errorMessage && (
+        <section className="section">
+          <div className="errorBox">
+            {errorMessage}
+
+            <button
+              onClick={loadDashboard}
+              className="retryButton"
+            >
+              Retry
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* QUICK ACCESS */}
       <section className="section">
         <div className="sectionHeader">
           <div>
             <h2>Quick Access</h2>
-            <p>Tap a module to continue</p>
+
+            <p>
+              Tap a module to continue
+            </p>
           </div>
         </div>
 
@@ -183,12 +340,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* RECENT ACTIVITY */}
       <section className="section">
         <div className="card">
           <div className="sectionHeader rowHeader">
             <div>
-              <h2>Recent Activity</h2>
-              <p>Latest costing actions</p>
+              <h2>
+                Recent Activity
+              </h2>
+
+              <p>
+                Latest system actions
+              </p>
             </div>
 
             <Link
@@ -199,45 +362,69 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="activityList">
-            {recentActivities.map((item) => (
-              <div
-                key={item.reference}
-                className="activityRow"
-              >
-                <div className="activityLeft">
-                  <span
-                    className={`badge badge-${item.type}`}
+          {activities.length === 0 && !loading ? (
+            <div className="emptyState">
+              No recent activity.
+            </div>
+          ) : (
+            <div className="activityList">
+              {activities.map((item) => {
+                const type =
+                  getActivityType(
+                    item.action
+                  )
+
+                return (
+                  <div
+                    key={item.id}
+                    className="activityRow"
                   >
-                    {item.action}
-                  </span>
+                    <div className="activityLeft">
+                      <span
+                        className={`badge badge-${type}`}
+                      >
+                        {getActivityLabel(
+                          item.action
+                        )}
+                      </span>
 
-                  <div className="activityContent">
-                    <strong>
-                      {item.reference}
-                    </strong>
+                      <div className="activityContent">
+                        <strong>
+                          {item.quotation_no}
+                        </strong>
 
-                    <span>
-                      {item.detail}
-                    </span>
+                        <span>
+                          {item.details ||
+                            '-'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="activityTime">
+                      {formatTime(
+                        item.created_at
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="activityTime">
-                  {item.time}
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
+      {/* APPROVAL */}
       <section className="section bottomSection">
         <div className="card">
           <div className="sectionHeader rowHeader">
             <div>
-              <h2>Approval Status</h2>
-              <p>Latest approval progress</p>
+              <h2>
+                Approval Status
+              </h2>
+
+              <p>
+                Latest approval progress
+              </p>
             </div>
 
             <Link
@@ -248,37 +435,62 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="approvalList">
-            {approvals.map((item) => (
-              <div
-                key={item.code}
-                className="approvalRow"
-              >
-                <div>
-                  <div className="approvalCode">
-                    {item.code}
-                  </div>
+          {approvals.length === 0 && !loading ? (
+            <div className="emptyState">
+              No pending or approved costings yet.
+            </div>
+          ) : (
+            <div className="approvalList">
+              {approvals.map((item) => {
+                const approved =
+                  item.status.toLowerCase() ===
+                  'approved'
 
-                  <div className="approvalProject">
-                    {item.project}
-                  </div>
-                </div>
+                const color = approved
+                  ? '#10B981'
+                  : '#F59E0B'
 
-                <span
-                  className="approvalBadge"
-                  style={{
-                    background: `${item.color}22`,
-                    color: item.color,
-                  }}
-                >
-                  {item.status}
-                </span>
-              </div>
-            ))}
-          </div>
+                return (
+                  <div
+                    key={item.id}
+                    className="approvalRow"
+                  >
+                    <div>
+                      <div className="approvalCode">
+                        {item.quotation_no}
+                      </div>
+
+                      <div className="approvalProject">
+                        {item.customer_name
+                          ? `${item.customer_name} · `
+                          : ''}
+
+                        {item.project_name ||
+                          '-'}
+                      </div>
+                    </div>
+
+                    <span
+                      className="approvalBadge"
+                      style={{
+                        background:
+                          `${color}22`,
+                        color,
+                      }}
+                    >
+                      {approved
+                        ? 'Approved'
+                        : 'Pending'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 
+      {/* BOTTOM NAV */}
       <nav className="bottomNav">
         <BottomNavItem
           href="/"
@@ -290,13 +502,13 @@ export default function HomePage() {
         <BottomNavItem
           href="/calculator"
           icon="🧮"
-          label="Calculator"
+          label="Costing"
         />
 
         <BottomNavItem
           href="/materials"
           icon="📦"
-          label="Materials"
+          label="Material"
         />
 
         <BottomNavItem
@@ -385,8 +597,10 @@ export default function HomePage() {
           width: 48px;
           height: 48px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background:
+            rgba(255, 255, 255, 0.2);
+          border: 1px solid
+            rgba(255, 255, 255, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -412,9 +626,11 @@ export default function HomePage() {
           background: white;
           border-radius: 17px;
           padding: 14px;
-          border: 1px solid #edf0f5;
+          border:
+            1px solid #edf0f5;
           box-shadow:
-            0 5px 18px rgba(15, 23, 42, 0.07);
+            0 5px 18px
+            rgba(15, 23, 42, 0.07);
         }
 
         .summaryTitle {
@@ -463,7 +679,8 @@ export default function HomePage() {
 
         .rowHeader {
           display: flex;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           align-items: center;
           gap: 12px;
         }
@@ -489,9 +706,11 @@ export default function HomePage() {
           border-radius: 20px;
           padding: 16px;
           min-height: 145px;
-          border: 1px solid rgba(0, 0, 0, 0.04);
+          border: 1px solid
+            rgba(0, 0, 0, 0.04);
           box-shadow:
-            0 5px 16px rgba(15, 23, 42, 0.05);
+            0 5px 16px
+            rgba(15, 23, 42, 0.05);
         }
 
         .quickIcon {
@@ -522,9 +741,11 @@ export default function HomePage() {
           background: white;
           border-radius: 20px;
           padding: 18px;
-          border: 1px solid #edf0f5;
+          border:
+            1px solid #edf0f5;
           box-shadow:
-            0 6px 20px rgba(15, 23, 42, 0.05);
+            0 6px 20px
+            rgba(15, 23, 42, 0.05);
         }
 
         .activityList {
@@ -533,11 +754,13 @@ export default function HomePage() {
 
         .activityRow {
           display: flex;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           align-items: center;
           gap: 12px;
           padding: 14px 0;
-          border-bottom: 1px solid #edf0f3;
+          border-bottom:
+            1px solid #edf0f3;
         }
 
         .activityRow:last-child {
@@ -549,6 +772,7 @@ export default function HomePage() {
           gap: 12px;
           align-items: center;
           min-width: 0;
+          flex: 1;
         }
 
         .activityContent {
@@ -576,6 +800,7 @@ export default function HomePage() {
           font-size: 11px;
           color: #9ca3af;
           white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .badge {
@@ -596,9 +821,19 @@ export default function HomePage() {
           color: #991b1b;
         }
 
+        .badge-edit {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+
         .badge-pending {
           background: #fef3c7;
           color: #92400e;
+        }
+
+        .badge-approved {
+          background: #d1fae5;
+          color: #047857;
         }
 
         .approvalList {
@@ -608,10 +843,12 @@ export default function HomePage() {
 
         .approvalRow {
           display: flex;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           align-items: center;
           gap: 12px;
-          border: 1px solid #edf0f3;
+          border:
+            1px solid #edf0f3;
           border-radius: 14px;
           padding: 13px;
         }
@@ -636,20 +873,54 @@ export default function HomePage() {
           white-space: nowrap;
         }
 
+        .emptyState {
+          color: #9ca3af;
+          font-size: 13px;
+          padding: 10px 0 4px;
+        }
+
+        .errorBox {
+          background: #fee2e2;
+          color: #991b1b;
+          border-radius: 14px;
+          padding: 14px;
+          font-size: 13px;
+          display: flex;
+          justify-content:
+            space-between;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .retryButton {
+          border: none;
+          background: white;
+          color: #991b1b;
+          padding: 7px 12px;
+          border-radius: 8px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
         .bottomNav {
           position: fixed;
           left: 0;
           right: 0;
           bottom: 0;
           height: 72px;
-          background: rgba(255, 255, 255, 0.97);
-          border-top: 1px solid #e5e7eb;
+          background:
+            rgba(255, 255, 255, 0.97);
+          border-top:
+            1px solid #e5e7eb;
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
+          grid-template-columns:
+            repeat(5, 1fr);
           z-index: 999;
-          padding-bottom: env(safe-area-inset-bottom);
+          padding-bottom:
+            env(safe-area-inset-bottom);
           box-shadow:
-            0 -4px 18px rgba(15, 23, 42, 0.06);
+            0 -4px 18px
+            rgba(15, 23, 42, 0.06);
         }
 
         .navItem {
@@ -687,7 +958,8 @@ export default function HomePage() {
 
         @media (max-width: 600px) {
           .hero {
-            padding: 22px 16px 72px;
+            padding:
+              22px 16px 72px;
           }
 
           .hero h1 {
@@ -730,15 +1002,17 @@ export default function HomePage() {
           }
 
           .activityRow {
-            align-items: flex-start;
+            align-items:
+              flex-start;
           }
 
           .activityLeft {
-            align-items: flex-start;
+            align-items:
+              flex-start;
           }
 
           .activityContent span {
-            max-width: 155px;
+            max-width: 145px;
           }
 
           .badge {

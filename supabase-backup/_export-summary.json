@@ -1,0 +1,47 @@
+[
+  {
+    "table": "materials",
+    "status": "OK",
+    "rows": 7
+  },
+  {
+    "table": "customers",
+    "status": "OK",
+    "rows": 0
+  },
+  {
+    "table": "quotations",
+    "status": "OK",
+    "rows": 1
+  },
+  {
+    "table": "quotation_materials",
+    "status": "OK",
+    "rows": 1
+  },
+  {
+    "table": "quotation_items",
+    "status": "OK",
+    "rows": 0
+  },
+  {
+    "table": "quotation_logs",
+    "status": "OK",
+    "rows": 21
+  },
+  {
+    "table": "labour_rates",
+    "status": "OK",
+    "rows": 0
+  },
+  {
+    "table": "logistics_rates",
+    "status": "OK",
+    "rows": 0
+  },
+  {
+    "table": "profiles",
+    "status": "OK",
+    "rows": 0
+  }
+]

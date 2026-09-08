@@ -1,0 +1,191 @@
+[
+  {
+    "id": "ea755b29-1053-43cb-99e9-3efc0eeff88f",
+    "quotation_id": "83c99592-3bb7-4365-a980-b18b7a4cd238",
+    "quotation_no": "Q2609001",
+    "action": "DELETE",
+    "details": "Deleted quotation for PNMY - Sunway Velocity",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T01:33:11.682768+00:00"
+  },
+  {
+    "id": "1c468c09-9780-4e95-8148-e1a8b899004e",
+    "quotation_id": "98097fad-057f-4e5f-bba0-7fa94b75a617",
+    "quotation_no": "Q2609001",
+    "action": "CREATE",
+    "details": "Created quotation for Genting - Baccarat 2026",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T01:35:45.81403+00:00"
+  },
+  {
+    "id": "271db26a-9cf7-419c-abc7-a2f58f17099b",
+    "quotation_id": "9c92c8fe-b2e2-4fa9-81ab-9be486d5da6c",
+    "quotation_no": "Q2609002",
+    "action": "CREATE",
+    "details": "Created quotation for CLOUDEXPO - MITEC",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T08:51:41.807719+00:00"
+  },
+  {
+    "id": "7be62835-b5b9-4a81-aba0-128e65727b78",
+    "quotation_id": "74a030ff-cf57-4b8f-af3f-da04df880185",
+    "quotation_no": "Q2609003",
+    "action": "CREATE",
+    "details": "Created quotation for GEWEE - SASD",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T12:21:45.414884+00:00"
+  },
+  {
+    "id": "30fd61f7-aac9-46d8-a458-a307cd3b6b6f",
+    "quotation_id": "236c6797-6d15-407f-b76b-b38a0f2f8c2a",
+    "quotation_no": "Q2609004",
+    "action": "CREATE",
+    "details": "Created quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T12:23:30.729543+00:00"
+  },
+  {
+    "id": "2121698e-9ff5-4120-b096-74b03b422dc8",
+    "quotation_id": "6f8f321d-6546-4f09-90d3-3c09f3060223",
+    "quotation_no": "Q2609005",
+    "action": "CREATE",
+    "details": "Created quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T12:38:04.928371+00:00"
+  },
+  {
+    "id": "201a0045-27cd-473d-ac02-583e95da0568",
+    "quotation_id": "beb5dc71-aced-4165-8a26-7d53caa5d299",
+    "quotation_no": "Q2609006",
+    "action": "CREATE",
+    "details": "Created quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T13:06:01.736421+00:00"
+  },
+  {
+    "id": "fa0ec20b-e2b7-4ace-8514-7f87c595d8f4",
+    "quotation_id": "1b68897e-b76a-426d-93c2-f0bdcc2d5b4c",
+    "quotation_no": "Q2609007",
+    "action": "CREATE",
+    "details": "Created quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T13:06:52.54729+00:00"
+  },
+  {
+    "id": "fe90ea15-c20b-481e-8cf0-daead7960915",
+    "quotation_id": "7b88ed46-d881-4bf4-8a32-2b8688c0cd86",
+    "quotation_no": "Q2609008",
+    "action": "CREATE",
+    "details": "Created quotation for Then - Opener",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:41:17.525781+00:00"
+  },
+  {
+    "id": "25052906-4a11-47b5-9501-52ba8740b529",
+    "quotation_id": "7b88ed46-d881-4bf4-8a32-2b8688c0cd86",
+    "quotation_no": "Q2609008",
+    "action": "DELETE",
+    "details": "Deleted quotation for Then - Opener",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:44.324035+00:00"
+  },
+  {
+    "id": "707a5b9b-8d73-42ee-8be6-1fda936010da",
+    "quotation_id": "1b68897e-b76a-426d-93c2-f0bdcc2d5b4c",
+    "quotation_no": "Q2609007",
+    "action": "DELETE",
+    "details": "Deleted quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:46.248002+00:00"
+  },
+  {
+    "id": "057da10f-4261-46fa-94fb-356e7a83bcd5",
+    "quotation_id": "beb5dc71-aced-4165-8a26-7d53caa5d299",
+    "quotation_no": "Q2609006",
+    "action": "DELETE",
+    "details": "Deleted quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:47.575804+00:00"
+  },
+  {
+    "id": "c0d53808-7767-41d3-b468-df2a0d291e20",
+    "quotation_id": "6f8f321d-6546-4f09-90d3-3c09f3060223",
+    "quotation_no": "Q2609005",
+    "action": "DELETE",
+    "details": "Deleted quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:48.839614+00:00"
+  },
+  {
+    "id": "e4e3fc93-b837-4eb1-bd12-5afffb23e41c",
+    "quotation_id": "236c6797-6d15-407f-b76b-b38a0f2f8c2a",
+    "quotation_no": "Q2609004",
+    "action": "DELETE",
+    "details": "Deleted quotation for Genting - Projets",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:50.170428+00:00"
+  },
+  {
+    "id": "a72af6f9-11f0-4fd2-8d03-105e06e78cd5",
+    "quotation_id": "74a030ff-cf57-4b8f-af3f-da04df880185",
+    "quotation_no": "Q2609003",
+    "action": "DELETE",
+    "details": "Deleted quotation for GEWEE - SASD",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:51.559359+00:00"
+  },
+  {
+    "id": "9f650897-4025-4b13-8bef-3fbc1cbd4c5a",
+    "quotation_id": "9c92c8fe-b2e2-4fa9-81ab-9be486d5da6c",
+    "quotation_no": "Q2609002",
+    "action": "DELETE",
+    "details": "Deleted quotation for CLOUDEXPO - MITEC",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:52.823776+00:00"
+  },
+  {
+    "id": "8db09a7b-45f9-40d0-b51b-2ade5531b39a",
+    "quotation_id": "98097fad-057f-4e5f-bba0-7fa94b75a617",
+    "quotation_no": "Q2609001",
+    "action": "DELETE",
+    "details": "Deleted quotation for Genting - Baccarat 2026",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:42:54.26491+00:00"
+  },
+  {
+    "id": "d1c4ccf2-aa31-4a05-b820-0f6adb3f8bb1",
+    "quotation_id": "5bbf51f9-50b5-4ab4-aa23-b25698003a82",
+    "quotation_no": "Q2609001",
+    "action": "CREATE",
+    "details": "Created quotation for PNMY - One u",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:44:11.169699+00:00"
+  },
+  {
+    "id": "fa0c481a-94bf-43a7-922f-52aac1ee1d4f",
+    "quotation_id": "5bbf51f9-50b5-4ab4-aa23-b25698003a82",
+    "quotation_no": "Q2609001",
+    "action": "DELETE",
+    "details": "Deleted quotation for PNMY - One u",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:49:57.130289+00:00"
+  },
+  {
+    "id": "2a507364-aece-40ee-b3d4-3d1e86df42f3",
+    "quotation_id": "cf0836b5-cdbf-4331-89cd-75dc39d89b2c",
+    "quotation_no": "Q2609002",
+    "action": "CREATE",
+    "details": "Created quotation for GENTING - Baccarat",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T14:51:32.137331+00:00"
+  },
+  {
+    "id": "023d618f-f936-4673-893b-8d5591f4da5c",
+    "quotation_id": "cf0836b5-cdbf-4331-89cd-75dc39d89b2c",
+    "quotation_no": "Q2609002",
+    "action": "EDIT",
+    "details": "Updated quotation for GENTING - Baccarat",
+    "performed_by": "Admin",
+    "created_at": "2026-09-08T15:26:27.145122+00:00"
+  }
+]

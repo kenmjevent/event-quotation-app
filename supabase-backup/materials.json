@@ -1,0 +1,72 @@
+[
+  {
+    "id": "5acb4f44-0771-42f7-a20d-c91ea0ab76c3",
+    "name": "18mm Plywood 4x8",
+    "category": "Board",
+    "unit": "sheet",
+    "cost_price": 120,
+    "wastage_percent": 10,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "dc2e9d67-4ba0-404e-87c5-45b360fdac48",
+    "name": "5mm Acrylic",
+    "category": "Acrylic",
+    "unit": "sqft",
+    "cost_price": 18,
+    "wastage_percent": 5,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "60cb4f9f-3d6d-4f9f-a3ec-68517661fd75",
+    "name": "Sticker Printing",
+    "category": "Printing",
+    "unit": "sqft",
+    "cost_price": 3,
+    "wastage_percent": 5,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "5cd10ca2-c0f7-4fbc-9fae-29b80f316f81",
+    "name": "Sticker + Lamination",
+    "category": "Printing",
+    "unit": "sqft",
+    "cost_price": 4.5,
+    "wastage_percent": 5,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "40b43a65-7c97-43b5-9173-8947d519d1cd",
+    "name": "ABS Edging",
+    "category": "Finishing",
+    "unit": "ft",
+    "cost_price": 1.5,
+    "wastage_percent": 5,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "08daf5bd-07c7-4b70-94e6-7088f365af8d",
+    "name": "LED Transformer",
+    "category": "Lighting",
+    "unit": "pcs",
+    "cost_price": 50,
+    "wastage_percent": 0,
+    "is_active": true,
+    "created_at": "2026-09-07T23:35:06.283909+00:00"
+  },
+  {
+    "id": "219f96c0-a750-4e5f-81d3-67b71ea28b6b",
+    "name": "15mm Plywood 4x8",
+    "category": "BOARD",
+    "unit": "Sheet",
+    "cost_price": 100,
+    "wastage_percent": 10,
+    "is_active": true,
+    "created_at": "2026-09-07T23:39:14.907749+00:00"
+  }
+]

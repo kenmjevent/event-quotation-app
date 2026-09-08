@@ -1,0 +1,25 @@
+[
+  {
+    "id": "cf0836b5-cdbf-4331-89cd-75dc39d89b2c",
+    "quotation_no": "Q2609002",
+    "customer_id": null,
+    "project_name": "Baccarat",
+    "status": "draft",
+    "target_margin": 50,
+    "material_cost": 7323.76,
+    "labour_cost": 6,
+    "logistics_cost": 0,
+    "total_cost": 7329.76,
+    "selling_price": 14659.53,
+    "gross_profit": 7329.76,
+    "gross_margin": 50,
+    "created_by": null,
+    "created_at": "2026-09-08T14:51:31.689557+00:00",
+    "updated_at": "2026-09-08T15:26:29.053+00:00",
+    "customer_name": "GENTING",
+    "quotation_date": "2026-09-08",
+    "transport_cost": 0,
+    "installation_cost": 0,
+    "dismantling_cost": 0
+  }
+]

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "513e03a2-7bfd-4ad2-b30f-c0934899ef02",
+    "quotation_id": "cf0836b5-cdbf-4331-89cd-75dc39d89b2c",
+    "item_description": "Feature Wall",
+    "material_id": "dc2e9d67-4ba0-404e-87c5-45b360fdac48",
+    "width_mm": 1200,
+    "height_mm": 2000,
+    "length_mm": 1000,
+    "quantity": 15,
+    "required_qty": 406.88,
+    "material_cost": 7323.76,
+    "created_at": "2026-09-08T15:26:27.017154+00:00"
+  }
+]

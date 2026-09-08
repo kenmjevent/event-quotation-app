@@ -58,22 +58,37 @@ const recentActivities = [
     action: 'Created costing',
     reference: 'EST2609002',
     detail: 'Genting - Baccarat 2026',
-    time: 'Today, 10:51 PM',
+    time: '10:51 PM',
     type: 'create',
   },
   {
     action: 'Deleted costing',
     reference: 'EST2609001',
     detail: 'PNMY - One U',
-    time: 'Today, 10:49 PM',
+    time: '10:49 PM',
     type: 'delete',
   },
   {
     action: 'Approval pending',
     reference: 'EST2609003',
     detail: 'TRX Event Build',
-    time: 'Today, 9:30 PM',
+    time: '9:30 PM',
     type: 'pending',
+  },
+]
+
+const approvals = [
+  {
+    code: 'EST2609003',
+    project: 'TRX Event Build',
+    status: 'Pending',
+    color: '#F59E0B',
+  },
+  {
+    code: 'EST2609004',
+    project: 'Mooncake Booth',
+    status: 'Approved',
+    color: '#10B981',
   },
 ]
 
@@ -82,76 +97,59 @@ export default function HomePage() {
     <main className="page">
       <section className="hero">
         <div className="heroInner">
-          <div className="heroTop">
-            <div>
-              <div className="welcome">
-                Welcome back
-              </div>
+          <div>
+            <div className="welcome">Welcome back</div>
 
-              <h1>
-                Event Costing Dashboard
-              </h1>
+            <h1>Event Costing</h1>
 
-              <p className="heroText">
-                Manage costing, materials,
-                approvals and internal activity
-                in one place
-              </p>
-            </div>
-
-            <Link
-              href="/profile"
-              className="profileButton"
-            >
-              <span className="profileIcon">
-                👤
-              </span>
-
-              <span>
-                Admin
-              </span>
-            </Link>
+            <p className="heroText">
+              Internal costing & approval system
+            </p>
           </div>
+
+          <Link
+            href="/profile"
+            className="avatarButton"
+          >
+            👤
+          </Link>
         </div>
       </section>
 
       <section className="summarySection">
         <div className="summaryGrid">
           <SummaryCard
-            title="Total Costings"
+            title="Costings"
             value="128"
             sub="This month"
           />
 
           <SummaryCard
-            title="Pending Approval"
+            title="Pending"
             value="7"
-            sub="Need review"
+            sub="Need approval"
           />
 
           <SummaryCard
             title="Materials"
             value="86"
-            sub="Active items"
+            sub="Active"
           />
 
           <SummaryCard
-            title="Draft Costings"
+            title="Drafts"
             value="12"
             sub="In progress"
           />
         </div>
       </section>
 
-      <section className="contentSection">
+      <section className="section">
         <div className="sectionHeader">
-          <h2>
-            Quick Access
-          </h2>
-
-          <p>
-            Tap a module to continue
-          </p>
+          <div>
+            <h2>Quick Access</h2>
+            <p>Tap a module to continue</p>
+          </div>
         </div>
 
         <div className="quickGrid">
@@ -185,125 +183,134 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mainGridSection">
-        <div className="mainGrid">
-          <div className="card">
-            <div className="sectionHeader">
-              <h2>
-                Recent Activity
-              </h2>
-
-              <p>
-                Latest costing actions
-              </p>
+      <section className="section">
+        <div className="card">
+          <div className="sectionHeader rowHeader">
+            <div>
+              <h2>Recent Activity</h2>
+              <p>Latest costing actions</p>
             </div>
 
-            <div className="activityList">
-              {recentActivities.map(
-                (item, index) => (
-                  <div
-                    key={index}
-                    className="activityRow"
-                  >
-                    <div className="activityMain">
-                      <div className="activityTop">
-                        <span
-                          className={`badge badge-${item.type}`}
-                        >
-                          {item.action}
-                        </span>
-
-                        <strong>
-                          {item.reference}
-                        </strong>
-                      </div>
-
-                      <div className="activityDetail">
-                        {item.detail}
-                      </div>
-                    </div>
-
-                    <div className="activityTime">
-                      {item.time}
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
+            <Link
+              href="/activity"
+              className="viewAll"
+            >
+              View all
+            </Link>
           </div>
 
-          <div className="sideColumn">
-            <div className="card">
-              <div className="sectionHeader">
-                <h2>
-                  Pending Approval
-                </h2>
+          <div className="activityList">
+            {recentActivities.map((item) => (
+              <div
+                key={item.reference}
+                className="activityRow"
+              >
+                <div className="activityLeft">
+                  <span
+                    className={`badge badge-${item.type}`}
+                  >
+                    {item.action}
+                  </span>
 
-                <p>
-                  Items waiting for action
-                </p>
+                  <div className="activityContent">
+                    <strong>
+                      {item.reference}
+                    </strong>
+
+                    <span>
+                      {item.detail}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="activityTime">
+                  {item.time}
+                </div>
               </div>
-
-              <div className="statusList">
-                <MiniStatusCard
-                  code="EST2609003"
-                  project="TRX Event Build"
-                  status="Pending"
-                  color="#F59E0B"
-                />
-
-                <MiniStatusCard
-                  code="EST2609004"
-                  project="Mooncake Booth"
-                  status="Approved"
-                  color="#10B981"
-                />
-
-                <MiniStatusCard
-                  code="EST2609005"
-                  project="Retail Kiosk"
-                  status="Draft"
-                  color="#6B7280"
-                />
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="sectionHeader">
-                <h2>
-                  Quick Actions
-                </h2>
-
-                <p>
-                  Common shortcuts
-                </p>
-              </div>
-
-              <div className="shortcutList">
-                <QuickActionButton
-                  href="/calculator"
-                  label="Create New Costing"
-                />
-
-                <QuickActionButton
-                  href="/materials"
-                  label="Manage Materials"
-                />
-
-                <QuickActionButton
-                  href="/approvals"
-                  label="Check Approvals"
-                />
-
-                <QuickActionButton
-                  href="/activity"
-                  label="View Activity Log"
-                />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
+
+      <section className="section bottomSection">
+        <div className="card">
+          <div className="sectionHeader rowHeader">
+            <div>
+              <h2>Approval Status</h2>
+              <p>Latest approval progress</p>
+            </div>
+
+            <Link
+              href="/approvals"
+              className="viewAll"
+            >
+              View all
+            </Link>
+          </div>
+
+          <div className="approvalList">
+            {approvals.map((item) => (
+              <div
+                key={item.code}
+                className="approvalRow"
+              >
+                <div>
+                  <div className="approvalCode">
+                    {item.code}
+                  </div>
+
+                  <div className="approvalProject">
+                    {item.project}
+                  </div>
+                </div>
+
+                <span
+                  className="approvalBadge"
+                  style={{
+                    background: `${item.color}22`,
+                    color: item.color,
+                  }}
+                >
+                  {item.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <nav className="bottomNav">
+        <BottomNavItem
+          href="/"
+          icon="🏠"
+          label="Home"
+          active
+        />
+
+        <BottomNavItem
+          href="/calculator"
+          icon="🧮"
+          label="Calculator"
+        />
+
+        <BottomNavItem
+          href="/materials"
+          icon="📦"
+          label="Materials"
+        />
+
+        <BottomNavItem
+          href="/approvals"
+          icon="✅"
+          label="Approval"
+        />
+
+        <BottomNavItem
+          href="/profile"
+          icon="👤"
+          label="Profile"
+        />
+      </nav>
 
       <style jsx global>{`
         * {
@@ -317,8 +324,12 @@ export default function HomePage() {
           width: 100%;
           max-width: 100%;
           overflow-x: hidden;
-          background: #f5f7fb;
+          background: #f4f6fa;
           font-family: Arial, sans-serif;
+        }
+
+        body {
+          padding-bottom: 88px;
         }
 
         a {
@@ -327,225 +338,193 @@ export default function HomePage() {
 
         .page {
           min-height: 100vh;
-          background: #f5f7fb;
-          padding-bottom: 50px;
+          background: #f4f6fa;
+          padding-bottom: 30px;
         }
 
         .hero {
           background: linear-gradient(
             135deg,
             #0f766e,
-            #14b8a6
+            #0d9488
           );
           color: white;
-          padding: 30px 20px 95px;
+          padding: 26px 18px 78px;
           border-bottom-left-radius: 30px;
           border-bottom-right-radius: 30px;
         }
 
         .heroInner {
-          max-width: 1200px;
+          max-width: 1100px;
           margin: 0 auto;
-        }
-
-        .heroTop {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          gap: 18px;
+          justify-content: space-between;
+          gap: 15px;
         }
 
         .welcome {
-          font-size: 14px;
-          opacity: 0.9;
-          margin-bottom: 6px;
+          font-size: 13px;
+          opacity: 0.85;
+          margin-bottom: 5px;
         }
 
         .hero h1 {
           margin: 0;
-          font-size: 32px;
-          line-height: 1.2;
+          font-size: 30px;
+          line-height: 1.15;
         }
 
         .heroText {
-          margin: 9px 0 0;
-          font-size: 15px;
-          line-height: 1.5;
-          opacity: 0.95;
-          max-width: 650px;
+          margin: 8px 0 0;
+          font-size: 14px;
+          opacity: 0.9;
         }
 
-        .profileButton {
-          text-decoration: none;
-          color: white;
-          background: rgba(
-            255,
-            255,
-            255,
-            0.18
-          );
-          border: 1px solid rgba(
-            255,
-            255,
-            255,
-            0.3
-          );
-          border-radius: 16px;
-          padding: 12px 16px;
-          font-weight: 700;
-          display: inline-flex;
+        .avatarButton {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          display: flex;
           align-items: center;
-          gap: 8px;
+          justify-content: center;
+          text-decoration: none;
+          font-size: 22px;
           flex-shrink: 0;
         }
 
-        .profileIcon {
-          font-size: 20px;
-        }
-
         .summarySection {
-          max-width: 1200px;
-          margin: -58px auto 0;
-          padding: 0 16px;
+          max-width: 1100px;
+          margin: -48px auto 0;
+          padding: 0 14px;
         }
 
         .summaryGrid {
           display: grid;
           grid-template-columns:
             repeat(4, minmax(0, 1fr));
-          gap: 14px;
+          gap: 10px;
         }
 
         .summaryCard {
           background: white;
-          border: 1px solid #eef2f7;
-          border-radius: 20px;
-          padding: 18px;
+          border-radius: 17px;
+          padding: 14px;
+          border: 1px solid #edf0f5;
           box-shadow:
-            0 8px 24px
-            rgba(15, 23, 42, 0.08);
+            0 5px 18px rgba(15, 23, 42, 0.07);
         }
 
         .summaryTitle {
           color: #6b7280;
-          font-size: 14px;
-          margin-bottom: 8px;
+          font-size: 12px;
         }
 
         .summaryValue {
-          color: #111827;
-          font-size: 28px;
+          margin-top: 5px;
+          font-size: 23px;
           font-weight: 800;
-          line-height: 1.1;
+          color: #111827;
         }
 
         .summarySub {
+          margin-top: 4px;
           color: #9ca3af;
-          font-size: 13px;
-          margin-top: 6px;
+          font-size: 11px;
         }
 
-        .contentSection,
-        .mainGridSection {
-          max-width: 1200px;
-          margin: 24px auto 0;
-          padding: 0 16px;
+        .section {
+          max-width: 1100px;
+          margin: 22px auto 0;
+          padding: 0 14px;
+        }
+
+        .bottomSection {
+          padding-bottom: 12px;
         }
 
         .sectionHeader {
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
 
         .sectionHeader h2 {
           margin: 0;
+          font-size: 21px;
           color: #111827;
-          font-size: 22px;
         }
 
         .sectionHeader p {
-          margin: 6px 0 0;
+          margin: 5px 0 0;
+          font-size: 13px;
           color: #6b7280;
-          font-size: 14px;
+        }
+
+        .rowHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .viewAll {
+          color: #0f766e;
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
+          white-space: nowrap;
         }
 
         .quickGrid {
           display: grid;
           grid-template-columns:
             repeat(3, minmax(0, 1fr));
-          gap: 16px;
+          gap: 12px;
         }
 
         .quickCard {
           text-decoration: none;
           color: #111827;
-          border-radius: 22px;
-          padding: 18px;
-          min-height: 155px;
-          border: 1px solid rgba(
-            0,
-            0,
-            0,
-            0.04
-          );
+          border-radius: 20px;
+          padding: 16px;
+          min-height: 145px;
+          border: 1px solid rgba(0, 0, 0, 0.04);
           box-shadow:
-            0 6px 18px
-            rgba(15, 23, 42, 0.06);
-          display: block;
-          transition:
-            transform 0.15s ease,
-            box-shadow 0.15s ease;
-        }
-
-        .quickCard:active {
-          transform: scale(0.98);
+            0 5px 16px rgba(15, 23, 42, 0.05);
         }
 
         .quickIcon {
-          width: 52px;
-          height: 52px;
-          border-radius: 17px;
+          width: 48px;
+          height: 48px;
+          border-radius: 15px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 25px;
-          color: white;
-          margin-bottom: 14px;
+          font-size: 23px;
+          margin-bottom: 13px;
         }
 
         .quickTitle {
-          font-size: 17px;
           font-weight: 700;
-          margin-bottom: 6px;
+          font-size: 16px;
+          line-height: 1.25;
         }
 
         .quickSubtitle {
+          margin-top: 6px;
+          font-size: 13px;
           color: #4b5563;
-          font-size: 14px;
-          line-height: 1.4;
-        }
-
-        .mainGrid {
-          display: grid;
-          grid-template-columns:
-            minmax(0, 2fr)
-            minmax(280px, 1fr);
-          gap: 20px;
-          align-items: start;
+          line-height: 1.35;
         }
 
         .card {
           background: white;
-          border: 1px solid #eef2f7;
-          border-radius: 22px;
-          padding: 20px;
+          border-radius: 20px;
+          padding: 18px;
+          border: 1px solid #edf0f5;
           box-shadow:
-            0 8px 24px
-            rgba(15, 23, 42, 0.06);
-        }
-
-        .sideColumn {
-          display: grid;
-          gap: 20px;
+            0 6px 20px rgba(15, 23, 42, 0.05);
         }
 
         .activityList {
@@ -555,46 +534,56 @@ export default function HomePage() {
         .activityRow {
           display: flex;
           justify-content: space-between;
-          gap: 14px;
-          padding: 15px 0;
-          border-bottom:
-            1px solid #e5e7eb;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 0;
+          border-bottom: 1px solid #edf0f3;
         }
 
         .activityRow:last-child {
           border-bottom: none;
         }
 
-        .activityMain {
+        .activityLeft {
+          display: flex;
+          gap: 12px;
+          align-items: center;
           min-width: 0;
         }
 
-        .activityTop {
+        .activityContent {
           display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-bottom: 6px;
+          flex-direction: column;
+          gap: 3px;
+          min-width: 0;
         }
 
-        .activityDetail {
-          color: #4b5563;
+        .activityContent strong {
           font-size: 14px;
-          word-break: break-word;
+          color: #111827;
+        }
+
+        .activityContent span {
+          font-size: 12px;
+          color: #6b7280;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 360px;
         }
 
         .activityTime {
-          color: #6b7280;
-          font-size: 13px;
+          font-size: 11px;
+          color: #9ca3af;
           white-space: nowrap;
         }
 
         .badge {
-          display: inline-block;
-          padding: 6px 10px;
+          padding: 6px 9px;
           border-radius: 999px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
+          white-space: nowrap;
         }
 
         .badge-create {
@@ -612,50 +601,79 @@ export default function HomePage() {
           color: #92400e;
         }
 
-        .statusList,
-        .shortcutList {
+        .approvalList {
           display: grid;
+          gap: 10px;
+        }
+
+        .approvalRow {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           gap: 12px;
+          border: 1px solid #edf0f3;
+          border-radius: 14px;
+          padding: 13px;
         }
 
-        .miniStatus {
-          border: 1px solid #e5e7eb;
-          border-radius: 16px;
-          padding: 14px;
-        }
-
-        .miniCode {
+        .approvalCode {
           font-weight: 700;
-          margin-bottom: 4px;
-        }
-
-        .miniProject {
-          color: #4b5563;
           font-size: 14px;
-          margin-bottom: 10px;
+          color: #111827;
         }
 
-        .miniBadge {
-          display: inline-block;
+        .approvalProject {
+          margin-top: 4px;
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .approvalBadge {
           padding: 6px 10px;
           border-radius: 999px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
+          white-space: nowrap;
         }
 
-        .shortcutButton {
+        .bottomNav {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.97);
+          border-top: 1px solid #e5e7eb;
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          z-index: 999;
+          padding-bottom: env(safe-area-inset-bottom);
+          box-shadow:
+            0 -4px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .navItem {
           text-decoration: none;
-          color: #111827;
-          background: #f9fafb;
-          border:
-            1px solid #e5e7eb;
-          padding: 14px 16px;
-          border-radius: 14px;
+          color: #7b8491;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          font-size: 10px;
           font-weight: 600;
-          display: block;
         }
 
-        @media (max-width: 900px) {
+        .navItemActive {
+          color: #0f766e;
+        }
+
+        .navIcon {
+          font-size: 21px;
+          line-height: 1;
+        }
+
+        @media (max-width: 800px) {
           .summaryGrid {
             grid-template-columns:
               repeat(2, minmax(0, 1fr));
@@ -664,95 +682,72 @@ export default function HomePage() {
           .quickGrid {
             grid-template-columns:
               repeat(2, minmax(0, 1fr));
-          }
-
-          .mainGrid {
-            grid-template-columns: 1fr;
           }
         }
 
         @media (max-width: 600px) {
           .hero {
-            padding:
-              24px 16px 86px;
-          }
-
-          .heroTop {
-            flex-direction: column;
-            align-items: stretch;
+            padding: 22px 16px 72px;
           }
 
           .hero h1 {
-            font-size: 28px;
-          }
-
-          .profileButton {
-            width: 100%;
-            justify-content: center;
+            font-size: 27px;
           }
 
           .summarySection {
-            margin-top: -48px;
-          }
-
-          .summaryGrid {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
-            gap: 10px;
+            margin-top: -43px;
           }
 
           .summaryCard {
-            padding: 15px;
-            border-radius: 17px;
+            padding: 13px;
           }
 
           .summaryValue {
-            font-size: 24px;
-          }
-
-          .contentSection,
-          .mainGridSection {
-            padding: 0 14px;
+            font-size: 22px;
           }
 
           .quickGrid {
-            grid-template-columns:
-              repeat(2, minmax(0, 1fr));
-            gap: 12px;
+            gap: 10px;
           }
 
           .quickCard {
-            padding: 15px;
-            min-height: 145px;
-            border-radius: 18px;
+            min-height: 138px;
+            padding: 14px;
           }
 
           .quickIcon {
-            width: 48px;
-            height: 48px;
-            border-radius: 15px;
-            font-size: 23px;
+            width: 45px;
+            height: 45px;
+            font-size: 21px;
           }
 
           .quickTitle {
-            font-size: 16px;
+            font-size: 15px;
           }
 
           .quickSubtitle {
-            font-size: 13px;
-          }
-
-          .card {
-            padding: 17px;
-            border-radius: 18px;
+            font-size: 12px;
           }
 
           .activityRow {
-            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .activityLeft {
+            align-items: flex-start;
+          }
+
+          .activityContent span {
+            max-width: 155px;
+          }
+
+          .badge {
+            font-size: 10px;
+            padding: 5px 7px;
           }
 
           .activityTime {
-            white-space: normal;
+            font-size: 10px;
           }
         }
       `}</style>
@@ -786,53 +781,33 @@ function SummaryCard({
   )
 }
 
-function MiniStatusCard({
-  code,
-  project,
-  status,
-  color,
-}: {
-  code: string
-  project: string
-  status: string
-  color: string
-}) {
-  return (
-    <div className="miniStatus">
-      <div className="miniCode">
-        {code}
-      </div>
-
-      <div className="miniProject">
-        {project}
-      </div>
-
-      <span
-        className="miniBadge"
-        style={{
-          background: `${color}22`,
-          color,
-        }}
-      >
-        {status}
-      </span>
-    </div>
-  )
-}
-
-function QuickActionButton({
+function BottomNavItem({
   href,
+  icon,
   label,
+  active = false,
 }: {
   href: string
+  icon: string
   label: string
+  active?: boolean
 }) {
   return (
     <Link
       href={href}
-      className="shortcutButton"
+      className={
+        active
+          ? 'navItem navItemActive'
+          : 'navItem'
+      }
     >
-      {label}
+      <span className="navIcon">
+        {icon}
+      </span>
+
+      <span>
+        {label}
+      </span>
     </Link>
   )
 }

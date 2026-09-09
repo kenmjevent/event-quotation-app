@@ -38,6 +38,11 @@ type Quotation = {
   updated_at: string | null
 }
 
+type MaterialRelation = {
+  name: string | null
+  unit: string | null
+}
+
 type QuotationMaterial = {
   id: string
   item_description: string | null
@@ -51,18 +56,14 @@ type QuotationMaterial = {
   required_qty: number | null
   material_cost: number | null
 
-  materials?: {
-    name: string | null
-    unit: string | null
-  } | null
+  materials: MaterialRelation[] | null
 }
 
 export default function QuotationViewPage() {
   const params = useParams()
   const router = useRouter()
 
-  const quotationId =
-    String(params.id)
+  const quotationId = String(params.id)
 
   const [profile, setProfile] =
     useState<UserProfile | null>(null)
@@ -73,9 +74,7 @@ export default function QuotationViewPage() {
   const [
     quotationMaterials,
     setQuotationMaterials,
-  ] = useState<
-    QuotationMaterial[]
-  >([])
+  ] = useState<QuotationMaterial[]>([])
 
   const [loading, setLoading] =
     useState(true)
@@ -112,9 +111,7 @@ export default function QuotationViewPage() {
         return
       }
 
-      setProfile(
-        currentProfile
-      )
+      setProfile(currentProfile)
 
       const [
         quotationResult,
@@ -123,16 +120,11 @@ export default function QuotationViewPage() {
         supabase
           .from('quotations')
           .select('*')
-          .eq(
-            'id',
-            quotationId
-          )
+          .eq('id', quotationId)
           .single(),
 
         supabase
-          .from(
-            'quotation_materials'
-          )
+          .from('quotation_materials')
           .select(`
             id,
             item_description,
@@ -160,27 +152,21 @@ export default function QuotationViewPage() {
           ),
       ])
 
-      if (
-        quotationResult.error
-      ) {
+      if (quotationResult.error) {
         throw quotationResult.error
       }
 
-      if (
-        materialsResult.error
-      ) {
+      if (materialsResult.error) {
         throw materialsResult.error
       }
 
       setQuotation(
-        quotationResult.data
+        quotationResult.data as Quotation
       )
 
       setQuotationMaterials(
-        (
-          materialsResult.data ||
-          []
-        ) as QuotationMaterial[]
+        (materialsResult.data ||
+          []) as QuotationMaterial[]
       )
     } catch (error: any) {
       console.error(
@@ -243,7 +229,8 @@ export default function QuotationViewPage() {
     }
 
     if (
-      profile.role !== 'admin' &&
+      profile.role !==
+        'admin' &&
       profile.role !==
         'estimator'
     ) {
@@ -268,7 +255,8 @@ export default function QuotationViewPage() {
     }
 
     if (
-      profile.role !== 'admin' &&
+      profile.role !==
+        'admin' &&
       profile.role !==
         'estimator'
     ) {
@@ -315,18 +303,9 @@ export default function QuotationViewPage() {
         .from('quotations')
         .update({
           status: 'pending',
-
-          /*
-            Clear old rejection
-            reason when
-            resubmitting.
-          */
-          rejection_reason:
-            null,
-
+          rejection_reason: null,
           updated_at:
-            new Date()
-              .toISOString(),
+            new Date().toISOString(),
         })
         .eq(
           'id',
@@ -340,9 +319,7 @@ export default function QuotationViewPage() {
       const {
         error: logError,
       } = await supabase
-        .from(
-          'quotation_logs'
-        )
+        .from('quotation_logs')
         .insert({
           quotation_id:
             quotation.id,
@@ -353,7 +330,13 @@ export default function QuotationViewPage() {
           action: 'SUBMIT',
 
           details:
-            `Submitted for approval - ${quotation.customer_name || ''} ${quotation.project_name || ''}`.trim(),
+            `Submitted for approval - ${
+              quotation.customer_name ||
+              ''
+            } ${
+              quotation.project_name ||
+              ''
+            }`.trim(),
 
           performed_by:
             profile.full_name ||
@@ -398,7 +381,6 @@ export default function QuotationViewPage() {
       {
         minimumFractionDigits:
           2,
-
         maximumFractionDigits:
           2,
       }
@@ -445,7 +427,6 @@ export default function QuotationViewPage() {
 
   return (
     <main className="page">
-
       <header className="topBar">
         <Link
           href="/cost-listings"
@@ -487,7 +468,6 @@ export default function QuotationViewPage() {
       )}
 
       <section className="heroCard">
-
         <div>
           <div className="heroLabel">
             Project
@@ -515,14 +495,12 @@ export default function QuotationViewPage() {
             )}
           </strong>
         </div>
-
       </section>
 
       {status ===
         'rejected' &&
         quotation.rejection_reason && (
           <section className="rejectionSection">
-
             <div className="rejectionTitle">
               Rejection Reason
             </div>
@@ -542,7 +520,6 @@ export default function QuotationViewPage() {
                   approval.
                 </div>
               )}
-
           </section>
         )}
 
@@ -552,7 +529,6 @@ export default function QuotationViewPage() {
         </h2>
 
         <div className="summaryGrid">
-
           <SummaryCard
             label="Material"
             value={formatRM(
@@ -595,7 +571,6 @@ export default function QuotationViewPage() {
             )}
             strong
           />
-
         </div>
       </section>
 
@@ -605,7 +580,6 @@ export default function QuotationViewPage() {
         </h2>
 
         <div className="priceBox">
-
           <PriceLine
             label="Target Margin"
             value={`${Number(
@@ -640,14 +614,11 @@ export default function QuotationViewPage() {
               2
             )}%`}
           />
-
         </div>
       </section>
 
       <section className="section">
-
         <div className="sectionHeader">
-
           <div>
             <h2>
               Materials
@@ -658,7 +629,6 @@ export default function QuotationViewPage() {
               costing
             </p>
           </div>
-
         </div>
 
         {quotationMaterials.length ===
@@ -668,107 +638,101 @@ export default function QuotationViewPage() {
           </div>
         ) : (
           <div className="materialList">
-
             {quotationMaterials.map(
               (
                 item,
                 index
-              ) => (
-                <div
-                  key={
-                    item.id
-                  }
-                  className="materialCard"
-                >
+              ) => {
+                const material =
+                  item.materials?.[0]
 
-                  <div className="materialTop">
+                return (
+                  <div
+                    key={
+                      item.id
+                    }
+                    className="materialCard"
+                  >
+                    <div className="materialTop">
+                      <div>
+                        <div className="materialNumber">
+                          Material{' '}
+                          {index + 1}
+                        </div>
 
-                    <div>
-                      <div className="materialNumber">
-                        Material{' '}
-                        {index + 1}
+                        <div className="materialName">
+                          {material?.name ||
+                            'Unknown Material'}
+                        </div>
+
+                        <div className="itemDescription">
+                          {item.item_description ||
+                            '-'}
+                        </div>
                       </div>
 
-                      <div className="materialName">
-                        {item.materials
-                          ?.name ||
-                          'Unknown Material'}
-                      </div>
-
-                      <div className="itemDescription">
-                        {item.item_description ||
-                          '-'}
-                      </div>
+                      <strong className="materialCost">
+                        {formatRM(
+                          item.material_cost
+                        )}
+                      </strong>
                     </div>
 
-                    <strong className="materialCost">
-                      {formatRM(
-                        item.material_cost
-                      )}
-                    </strong>
+                    <div className="detailGrid">
+                      <DetailItem
+                        label="Qty"
+                        value={String(
+                          item.quantity ||
+                            0
+                        )}
+                      />
 
+                      <DetailItem
+                        label="Required"
+                        value={`${Number(
+                          item.required_qty ||
+                            0
+                        ).toFixed(
+                          2
+                        )} ${
+                          material?.unit ||
+                          ''
+                        }`}
+                      />
+
+                      <DetailItem
+                        label="Width"
+                        value={`${Number(
+                          item.width_mm ||
+                            0
+                        )} mm`}
+                      />
+
+                      <DetailItem
+                        label="Height"
+                        value={`${Number(
+                          item.height_mm ||
+                            0
+                        )} mm`}
+                      />
+
+                      <DetailItem
+                        label="Length"
+                        value={`${Number(
+                          item.length_mm ||
+                            0
+                        )} mm`}
+                      />
+                    </div>
                   </div>
-
-                  <div className="detailGrid">
-
-                    <DetailItem
-                      label="Qty"
-                      value={String(
-                        item.quantity ||
-                          0
-                      )}
-                    />
-
-                    <DetailItem
-                      label="Required"
-                      value={`${Number(
-                        item.required_qty ||
-                          0
-                      ).toFixed(
-                        2
-                      )} ${
-                        item.materials
-                          ?.unit ||
-                        ''
-                      }`}
-                    />
-
-                    <DetailItem
-                      label="Width"
-                      value={`${Number(
-                        item.width_mm ||
-                          0
-                      )} mm`}
-                    />
-
-                    <DetailItem
-                      label="Height"
-                      value={`${Number(
-                        item.height_mm ||
-                          0
-                      )} mm`}
-                    />
-
-                    <DetailItem
-                      label="Length"
-                      value={`${Number(
-                        item.length_mm ||
-                          0
-                      )} mm`}
-                    />
-
-                  </div>
-
-                </div>
-              )
+                )
+              }
             )}
-
           </div>
         )}
       </section>
 
       <div className="actions">
-
         {canEdit() && (
           <Link
             href={`/quotations/${quotation.id}/edit`}
@@ -797,77 +761,42 @@ export default function QuotationViewPage() {
               : 'Submit for Approval'}
           </button>
         )}
-
       </div>
 
       <style jsx global>{`
         * {
-          box-sizing:
-            border-box;
+          box-sizing: border-box;
         }
 
         html,
         body {
           margin: 0;
           padding: 0;
-
-          background:
-            #f4f6fa;
-
-          font-family:
-            Arial,
-            sans-serif;
+          background: #f4f6fa;
+          font-family: Arial, sans-serif;
         }
 
         .page {
-          min-height:
-            100vh;
-
-          max-width:
-            950px;
-
-          margin:
-            0 auto;
-
-          padding:
-            18px
-            14px
-            40px;
+          min-height: 100vh;
+          max-width: 950px;
+          margin: 0 auto;
+          padding: 18px 14px 40px;
         }
 
         .loadingPage {
-          min-height:
-            100vh;
-
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          justify-content:
-            center;
-
-          background:
-            #f4f6fa;
-
-          font-family:
-            Arial,
-            sans-serif;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f4f6fa;
+          font-family: Arial, sans-serif;
         }
 
         .topBar {
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          gap:
-            12px;
-
-          margin-bottom:
-            18px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 18px;
         }
 
         .titleBlock {
@@ -875,670 +804,357 @@ export default function QuotationViewPage() {
         }
 
         .backButton {
-          width:
-            42px;
-
-          height:
-            42px;
-
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          justify-content:
-            center;
-
-          border-radius:
-            12px;
-
-          background:
-            white;
-
-          border:
-            1px solid
-            #e5e7eb;
-
-          text-decoration:
-            none;
-
-          color:
-            #0f766e;
-
-          font-size:
-            24px;
-
-          font-weight:
-            700;
+          width: 42px;
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          background: white;
+          border: 1px solid #e5e7eb;
+          text-decoration: none;
+          color: #0f766e;
+          font-size: 24px;
+          font-weight: 700;
         }
 
         .topTitle {
-          font-size:
-            23px;
-
-          font-weight:
-            800;
-
-          color:
-            #111827;
+          font-size: 23px;
+          font-weight: 800;
+          color: #111827;
         }
 
         .topSubtitle {
-          margin-top:
-            3px;
-
-          color:
-            #6b7280;
-
-          font-size:
-            12px;
+          margin-top: 3px;
+          color: #6b7280;
+          font-size: 12px;
         }
 
         .heroCard {
-          display:
-            flex;
-
-          justify-content:
-            space-between;
-
-          gap:
-            16px;
-
-          background:
-            linear-gradient(
-              135deg,
-              #0f766e,
-              #115e59
-            );
-
-          color:
-            white;
-
-          padding:
-            20px;
-
-          border-radius:
-            20px;
-
-          margin-bottom:
-            18px;
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          background: linear-gradient(
+            135deg,
+            #0f766e,
+            #115e59
+          );
+          color: white;
+          padding: 20px;
+          border-radius: 20px;
+          margin-bottom: 18px;
         }
 
         .heroLabel {
-          font-size:
-            11px;
-
-          opacity:
-            0.75;
+          font-size: 11px;
+          opacity: 0.75;
         }
 
         .heroTitle {
-          margin-top:
-            5px;
-
-          font-size:
-            22px;
-
-          font-weight:
-            800;
+          margin-top: 5px;
+          font-size: 22px;
+          font-weight: 800;
         }
 
         .heroCustomer {
-          margin-top:
-            5px;
-
-          font-size:
-            13px;
-
-          opacity:
-            0.9;
+          margin-top: 5px;
+          font-size: 13px;
+          opacity: 0.9;
         }
 
         .heroDate {
-          display:
-            flex;
-
-          flex-direction:
-            column;
-
-          text-align:
-            right;
-
-          font-size:
-            12px;
+          display: flex;
+          flex-direction: column;
+          text-align: right;
+          font-size: 12px;
         }
 
         .heroDate span {
-          opacity:
-            0.75;
-
-          margin-bottom:
-            5px;
+          opacity: 0.75;
+          margin-bottom: 5px;
         }
 
         .rejectionSection {
-          background:
-            #fff1f2;
-
-          border:
-            1px solid
-            #fecdd3;
-
-          border-radius:
-            16px;
-
-          padding:
-            15px;
-
-          margin-bottom:
-            16px;
+          background: #fff1f2;
+          border: 1px solid #fecdd3;
+          border-radius: 16px;
+          padding: 15px;
+          margin-bottom: 16px;
         }
 
         .rejectionTitle {
-          color:
-            #9f1239;
-
-          font-size:
-            13px;
-
-          font-weight:
-            800;
+          color: #9f1239;
+          font-size: 13px;
+          font-weight: 800;
         }
 
         .rejectionText {
-          margin-top:
-            6px;
-
-          color:
-            #881337;
-
-          font-size:
-            14px;
-
-          line-height:
-            1.5;
-
-          white-space:
-            pre-wrap;
+          margin-top: 6px;
+          color: #881337;
+          font-size: 14px;
+          line-height: 1.5;
+          white-space: pre-wrap;
         }
 
         .rejectionHint {
-          margin-top:
-            9px;
-
-          padding-top:
-            9px;
-
-          border-top:
-            1px solid
-            #fecdd3;
-
-          color:
-            #9f1239;
-
-          font-size:
-            12px;
+          margin-top: 9px;
+          padding-top: 9px;
+          border-top: 1px solid #fecdd3;
+          color: #9f1239;
+          font-size: 12px;
         }
 
         .section {
-          background:
-            white;
-
-          border:
-            1px solid
-            #e8ecf1;
-
-          border-radius:
-            18px;
-
-          padding:
-            17px;
-
-          margin-bottom:
-            16px;
+          background: white;
+          border: 1px solid #e8ecf1;
+          border-radius: 18px;
+          padding: 17px;
+          margin-bottom: 16px;
         }
 
         .section h2 {
-          margin:
-            0 0
-            14px;
-
-          font-size:
-            19px;
-
-          color:
-            #111827;
+          margin: 0 0 14px;
+          font-size: 19px;
+          color: #111827;
         }
 
         .sectionHeader p {
-          margin:
-            -8px 0
-            14px;
-
-          color:
-            #6b7280;
-
-          font-size:
-            12px;
+          margin: -8px 0 14px;
+          color: #6b7280;
+          font-size: 12px;
         }
 
         .summaryGrid {
-          display:
-            grid;
-
+          display: grid;
           grid-template-columns:
             repeat(
               3,
-              minmax(
-                0,
-                1fr
-              )
+              minmax(0, 1fr)
             );
-
-          gap:
-            10px;
+          gap: 10px;
         }
 
         .summaryCard {
-          padding:
-            13px;
-
-          border-radius:
-            12px;
-
-          background:
-            #f8fafc;
+          padding: 13px;
+          border-radius: 12px;
+          background: #f8fafc;
         }
 
         .summaryLabel {
-          font-size:
-            11px;
-
-          color:
-            #6b7280;
+          font-size: 11px;
+          color: #6b7280;
         }
 
         .summaryValue {
-          margin-top:
-            5px;
-
-          font-size:
-            14px;
-
-          font-weight:
-            700;
-
-          color:
-            #111827;
+          margin-top: 5px;
+          font-size: 14px;
+          font-weight: 700;
+          color: #111827;
         }
 
         .summaryValueStrong {
-          color:
-            #0f766e;
-
-          font-size:
-            16px;
+          color: #0f766e;
+          font-size: 16px;
         }
 
         .priceBox {
-          background:
-            #f8fafc;
-
-          border-radius:
-            14px;
-
-          padding:
-            12px 14px;
+          background: #f8fafc;
+          border-radius: 14px;
+          padding: 12px 14px;
         }
 
         .priceLine {
-          display:
-            flex;
-
-          justify-content:
-            space-between;
-
-          gap:
-            12px;
-
-          padding:
-            7px 0;
-
-          color:
-            #374151;
-
-          font-size:
-            14px;
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 7px 0;
+          color: #374151;
+          font-size: 14px;
         }
 
         .priceLineStrong {
-          font-size:
-            17px;
-
-          color:
-            #0f766e;
+          font-size: 17px;
+          color: #0f766e;
         }
 
         .materialList {
-          display:
-            grid;
-
-          gap:
-            10px;
+          display: grid;
+          gap: 10px;
         }
 
         .materialCard {
-          border:
-            1px solid
-            #e5e7eb;
-
-          border-radius:
-            14px;
-
-          padding:
-            13px;
-
-          background:
-            #fafbfc;
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 13px;
+          background: #fafbfc;
         }
 
         .materialTop {
-          display:
-            flex;
-
-          justify-content:
-            space-between;
-
-          gap:
-            12px;
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
         }
 
         .materialNumber {
-          font-size:
-            10px;
-
-          color:
-            #9ca3af;
+          font-size: 10px;
+          color: #9ca3af;
         }
 
         .materialName {
-          margin-top:
-            3px;
-
-          font-weight:
-            800;
-
-          color:
-            #111827;
+          margin-top: 3px;
+          font-weight: 800;
+          color: #111827;
         }
 
         .itemDescription {
-          margin-top:
-            3px;
-
-          color:
-            #6b7280;
-
-          font-size:
-            12px;
+          margin-top: 3px;
+          color: #6b7280;
+          font-size: 12px;
         }
 
         .materialCost {
-          color:
-            #0f766e;
+          color: #0f766e;
         }
 
         .detailGrid {
-          display:
-            grid;
-
+          display: grid;
           grid-template-columns:
             repeat(
               5,
-              minmax(
-                0,
-                1fr
-              )
+              minmax(0, 1fr)
             );
-
-          gap:
-            8px;
-
-          margin-top:
-            12px;
+          gap: 8px;
+          margin-top: 12px;
         }
 
         .detailItem {
-          background:
-            white;
-
-          border-radius:
-            9px;
-
-          padding:
-            8px;
+          background: white;
+          border-radius: 9px;
+          padding: 8px;
         }
 
         .detailLabel {
-          font-size:
-            9px;
-
-          color:
-            #9ca3af;
+          font-size: 9px;
+          color: #9ca3af;
         }
 
         .detailValue {
-          margin-top:
-            3px;
-
-          font-size:
-            11px;
-
-          font-weight:
-            700;
-
-          color:
-            #374151;
-
-          word-break:
-            break-word;
+          margin-top: 3px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #374151;
+          word-break: break-word;
         }
 
         .actions {
-          display:
-            grid;
-
+          display: grid;
           grid-template-columns:
             repeat(
               2,
-              minmax(
-                0,
-                1fr
-              )
+              minmax(0, 1fr)
             );
-
-          gap:
-            10px;
+          gap: 10px;
         }
 
         .editButton,
         .submitButton {
-          min-height:
-            48px;
-
-          border-radius:
-            13px;
-
-          display:
-            flex;
-
-          align-items:
-            center;
-
-          justify-content:
-            center;
-
-          font-size:
-            14px;
-
-          font-weight:
-            800;
-
-          text-decoration:
-            none;
-
-          cursor:
-            pointer;
+          min-height: 48px;
+          border-radius: 13px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 800;
+          text-decoration: none;
+          cursor: pointer;
         }
 
         .editButton {
-          border:
-            1px solid
-            #0f766e;
-
-          background:
-            white;
-
-          color:
-            #0f766e;
+          border: 1px solid #0f766e;
+          background: white;
+          color: #0f766e;
         }
 
         .submitButton {
-          border:
-            none;
-
-          background:
-            #0f766e;
-
-          color:
-            white;
+          border: none;
+          background: #0f766e;
+          color: white;
         }
 
         .submitButton:disabled {
-          opacity:
-            0.55;
-
-          cursor:
-            not-allowed;
+          opacity: 0.55;
+          cursor: not-allowed;
         }
 
         .statusBadge {
-          display:
-            inline-flex;
-
-          padding:
-            6px 10px;
-
-          border-radius:
-            999px;
-
-          font-size:
-            10px;
-
-          font-weight:
-            800;
-
-          text-transform:
-            capitalize;
+          display: inline-flex;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: capitalize;
         }
 
         .statusDraft {
-          background:
-            #f3f4f6;
-
-          color:
-            #4b5563;
+          background: #f3f4f6;
+          color: #4b5563;
         }
 
         .statusPending {
-          background:
-            #fef3c7;
-
-          color:
-            #92400e;
+          background: #fef3c7;
+          color: #92400e;
         }
 
         .statusApproved {
-          background:
-            #dcfce7;
-
-          color:
-            #166534;
+          background: #dcfce7;
+          color: #166534;
         }
 
         .statusRejected {
-          background:
-            #fee2e2;
-
-          color:
-            #991b1b;
+          background: #fee2e2;
+          color: #991b1b;
         }
 
         .errorBox,
         .successBox {
-          margin-bottom:
-            14px;
-
-          padding:
-            12px;
-
-          border-radius:
-            10px;
-
-          font-size:
-            13px;
+          margin-bottom: 14px;
+          padding: 12px;
+          border-radius: 10px;
+          font-size: 13px;
         }
 
         .errorBox {
-          background:
-            #fee2e2;
-
-          color:
-            #991b1b;
+          background: #fee2e2;
+          color: #991b1b;
         }
 
         .successBox {
-          background:
-            #dcfce7;
-
-          color:
-            #166534;
-
-          font-weight:
-            700;
+          background: #dcfce7;
+          color: #166534;
+          font-weight: 700;
         }
 
         .emptyBox {
-          color:
-            #6b7280;
-
-          font-size:
-            13px;
+          color: #6b7280;
+          font-size: 13px;
         }
 
         @media (
-          max-width:
-            650px
+          max-width: 650px
         ) {
           .heroCard {
-            flex-direction:
-              column;
+            flex-direction: column;
           }
 
           .heroDate {
-            text-align:
-              left;
+            text-align: left;
           }
 
           .summaryGrid {
             grid-template-columns:
               repeat(
                 2,
-                minmax(
-                  0,
-                  1fr
-                )
+                minmax(0, 1fr)
               );
           }
 
@@ -1546,20 +1162,15 @@ export default function QuotationViewPage() {
             grid-template-columns:
               repeat(
                 2,
-                minmax(
-                  0,
-                  1fr
-                )
+                minmax(0, 1fr)
               );
           }
 
           .actions {
-            grid-template-columns:
-              1fr;
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
-
     </main>
   )
 }
@@ -1597,11 +1208,7 @@ function StatusBadge({
   }
 
   return (
-    <span
-      className={
-        className
-      }
-    >
+    <span className={className}>
       {status}
     </span>
   )
@@ -1618,7 +1225,6 @@ function SummaryCard({
 }) {
   return (
     <div className="summaryCard">
-
       <div className="summaryLabel">
         {label}
       </div>
@@ -1632,7 +1238,6 @@ function SummaryCard({
       >
         {value}
       </div>
-
     </div>
   )
 }
@@ -1654,7 +1259,6 @@ function PriceLine({
           : 'priceLine'
       }
     >
-
       <span>
         {label}
       </span>
@@ -1662,7 +1266,6 @@ function PriceLine({
       <strong>
         {value}
       </strong>
-
     </div>
   )
 }
@@ -1676,7 +1279,6 @@ function DetailItem({
 }) {
   return (
     <div className="detailItem">
-
       <div className="detailLabel">
         {label}
       </div>
@@ -1684,7 +1286,6 @@ function DetailItem({
       <div className="detailValue">
         {value}
       </div>
-
     </div>
   )
 }

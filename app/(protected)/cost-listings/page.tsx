@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
+
+import {
+  getCurrentProfile,
+  type UserProfile,
+  canEditCosting,
+} from '../../../lib/authRole'
 
 type Costing = {
   id: string
@@ -19,81 +25,199 @@ type Costing = {
 }
 
 export default function CostListingsPage() {
-  const [costings, setCostings] = useState<Costing[]>([])
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] =
+    useState<UserProfile | null>(null)
 
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [costings, setCostings] =
+    useState<Costing[]>([])
 
-  const [message, setMessage] = useState('')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [loading, setLoading] =
+    useState(true)
+
+  const [search, setSearch] =
+    useState('')
+
+  const [statusFilter, setStatusFilter] =
+    useState('all')
+
+  const [message, setMessage] =
+    useState('')
+
+  const [errorMessage, setErrorMessage] =
+    useState('')
 
   useEffect(() => {
-    loadCostings()
+    loadPage()
   }, [])
 
-  async function loadCostings() {
+  async function loadPage() {
     setLoading(true)
+
+    await Promise.all([
+      loadProfile(),
+      loadCostings(),
+    ])
+
+    setLoading(false)
+  }
+
+  async function loadProfile() {
+    const data =
+      await getCurrentProfile()
+
+    setProfile(data)
+  }
+
+  async function loadCostings() {
     setErrorMessage('')
 
-    const { data, error } = await supabase
-      .from('quotations')
-      .select(`
-        id,
-        quotation_no,
-        customer_name,
-        project_name,
-        quotation_date,
-        status,
-        total_cost,
-        selling_price,
-        gross_profit,
-        gross_margin,
-        created_at
-      `)
-      .order('created_at', {
-        ascending: false,
-      })
+    const { data, error } =
+      await supabase
+        .from('quotations')
+        .select(`
+          id,
+          quotation_no,
+          customer_name,
+          project_name,
+          quotation_date,
+          status,
+          total_cost,
+          selling_price,
+          gross_profit,
+          gross_margin,
+          created_at
+        `)
+        .order('created_at', {
+          ascending: false,
+        })
 
     if (error) {
-      setErrorMessage(error.message)
-      setLoading(false)
+      setErrorMessage(
+        error.message
+      )
+
       return
     }
 
     setCostings(data || [])
-    setLoading(false)
   }
 
-  const filteredCostings = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-
-    return costings.filter((item) => {
-      const matchesSearch =
-        !keyword ||
-        String(item.quotation_no || '')
+  const filteredCostings =
+    useMemo(() => {
+      const keyword =
+        search
+          .trim()
           .toLowerCase()
-          .includes(keyword) ||
-        String(item.customer_name || '')
-          .toLowerCase()
-          .includes(keyword) ||
-        String(item.project_name || '')
-          .toLowerCase()
-          .includes(keyword)
 
-      const matchesStatus =
-        statusFilter === 'all' ||
-        String(item.status || 'draft').toLowerCase() ===
-          statusFilter.toLowerCase()
+      return costings.filter(
+        (item) => {
+          const matchesSearch =
+            !keyword ||
+            String(
+              item.quotation_no || ''
+            )
+              .toLowerCase()
+              .includes(keyword) ||
+            String(
+              item.customer_name || ''
+            )
+              .toLowerCase()
+              .includes(keyword) ||
+            String(
+              item.project_name || ''
+            )
+              .toLowerCase()
+              .includes(keyword)
 
-      return matchesSearch && matchesStatus
-    })
-  }, [costings, search, statusFilter])
+          const matchesStatus =
+            statusFilter === 'all' ||
+            String(
+              item.status || 'draft'
+            ).toLowerCase() ===
+              statusFilter.toLowerCase()
 
-  async function deleteCosting(item: Costing) {
-    const confirmed = window.confirm(
-      `Delete ${item.quotation_no}?\n\n${item.project_name || ''}\n\nThis cannot be undone.`
+          return (
+            matchesSearch &&
+            matchesStatus
+          )
+        }
+      )
+    }, [
+      costings,
+      search,
+      statusFilter,
+    ])
+
+  function canUserEdit(
+    item: Costing
+  ) {
+    if (!profile) {
+      return false
+    }
+
+    if (
+      !canEditCosting(
+        profile.role
+      )
+    ) {
+      return false
+    }
+
+    const status =
+      String(
+        item.status || 'draft'
+      ).toLowerCase()
+
+    /*
+      ADMIN:
+      Can edit any status.
+
+      ESTIMATOR:
+      Can only edit draft
+      or rejected costing.
+    */
+    if (
+      profile.role === 'admin'
+    ) {
+      return true
+    }
+
+    if (
+      profile.role ===
+      'estimator'
+    ) {
+      return (
+        status === 'draft' ||
+        status === 'rejected'
+      )
+    }
+
+    return false
+  }
+
+  function canUserDelete() {
+    return (
+      profile?.role === 'admin'
     )
+  }
+
+  async function deleteCosting(
+    item: Costing
+  ) {
+    if (
+      profile?.role !== 'admin'
+    ) {
+      alert(
+        'Only Admin can delete costing.'
+      )
+
+      return
+    }
+
+    const confirmed =
+      window.confirm(
+        `Delete ${item.quotation_no}?\n\n${item.project_name || ''}\n\nThis cannot be undone.`
+      )
 
     if (!confirmed) return
 
@@ -101,18 +225,27 @@ export default function CostListingsPage() {
     setErrorMessage('')
 
     try {
-      // Delete material details first
-      const { error: materialError } = await supabase
-        .from('quotation_materials')
+      const {
+        error:
+          materialError,
+      } = await supabase
+        .from(
+          'quotation_materials'
+        )
         .delete()
-        .eq('quotation_id', item.id)
+        .eq(
+          'quotation_id',
+          item.id
+        )
 
       if (materialError) {
         throw materialError
       }
 
-      // Delete quotation
-      const { error: quotationError } = await supabase
+      const {
+        error:
+          quotationError,
+      } = await supabase
         .from('quotations')
         .delete()
         .eq('id', item.id)
@@ -121,52 +254,91 @@ export default function CostListingsPage() {
         throw quotationError
       }
 
-      // Log deletion
-      const { error: logError } = await supabase
-        .from('quotation_logs')
+      const {
+        error: logError,
+      } = await supabase
+        .from(
+          'quotation_logs'
+        )
         .insert({
           quotation_id: null,
-          quotation_no: item.quotation_no,
+          quotation_no:
+            item.quotation_no,
           action: 'DELETE',
-          details: `Deleted costing - ${item.customer_name || ''} ${item.project_name || ''}`.trim(),
-          performed_by: 'Admin',
+          details:
+            `Deleted costing - ${
+              item.customer_name ||
+              ''
+            } ${
+              item.project_name ||
+              ''
+            }`.trim(),
+          performed_by:
+            profile?.full_name ||
+            profile?.email ||
+            'Admin',
         })
 
       if (logError) {
-        console.error('Delete log error:', logError)
+        console.error(
+          'Delete log error:',
+          logError
+        )
       }
 
-      setMessage(`${item.quotation_no} deleted successfully.`)
+      setMessage(
+        `${item.quotation_no} deleted successfully.`
+      )
 
       await loadCostings()
     } catch (error: any) {
       setErrorMessage(
-        error?.message || 'Unable to delete costing.'
+        error?.message ||
+          'Unable to delete costing.'
       )
     }
   }
 
-  function formatRM(value: number | null) {
-    return `RM${Number(value || 0).toLocaleString('en-MY', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+  function formatRM(
+    value: number | null
+  ) {
+    return `RM${Number(
+      value || 0
+    ).toLocaleString(
+      'en-MY',
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}`
   }
 
-  function formatDate(value: string | null) {
-    if (!value) return '-'
+  function formatDate(
+    value: string | null
+  ) {
+    if (!value) {
+      return '-'
+    }
 
-    return new Date(value).toLocaleDateString('en-MY', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
+    return new Date(
+      value
+    ).toLocaleDateString(
+      'en-MY',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }
+    )
   }
 
   return (
     <main className="page">
       <header className="topBar">
-        <Link href="/" className="backButton">
+        <Link
+          href="/"
+          className="backButton"
+        >
           ←
         </Link>
 
@@ -198,7 +370,9 @@ export default function CostListingsPage() {
           </div>
 
           <div className="summaryValue">
-            {filteredCostings.length}
+            {
+              filteredCostings.length
+            }
           </div>
         </div>
       </section>
@@ -207,7 +381,9 @@ export default function CostListingsPage() {
         <input
           value={search}
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
           placeholder="Search costing no., customer or project..."
           className="searchInput"
@@ -216,7 +392,9 @@ export default function CostListingsPage() {
         <select
           value={statusFilter}
           onChange={(e) =>
-            setStatusFilter(e.target.value)
+            setStatusFilter(
+              e.target.value
+            )
           }
           className="statusSelect"
         >
@@ -243,7 +421,7 @@ export default function CostListingsPage() {
 
         <button
           type="button"
-          onClick={loadCostings}
+          onClick={loadPage}
           className="refreshButton"
         >
           Refresh
@@ -269,38 +447,72 @@ export default function CostListingsPage() {
       )}
 
       {!loading &&
-        filteredCostings.length === 0 && (
+        filteredCostings.length ===
+          0 && (
           <div className="emptyCard">
             No costings found.
           </div>
         )}
 
       {!loading &&
-        filteredCostings.length > 0 && (
+        filteredCostings.length >
+          0 && (
           <>
             <div className="desktopTable">
               <table>
                 <thead>
                   <tr>
-                    <th>Costing No.</th>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Project</th>
-                    <th>Total Cost</th>
-                    <th>Selling</th>
-                    <th>Margin</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>
+                      Costing No.
+                    </th>
+
+                    <th>
+                      Date
+                    </th>
+
+                    <th>
+                      Customer
+                    </th>
+
+                    <th>
+                      Project
+                    </th>
+
+                    <th>
+                      Total Cost
+                    </th>
+
+                    <th>
+                      Selling
+                    </th>
+
+                    <th>
+                      Margin
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+
+                    <th>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {filteredCostings.map(
                     (item) => (
-                      <tr key={item.id}>
+                      <tr
+                        key={
+                          item.id
+                        }
+                      >
                         <td>
                           <strong>
-                            {item.quotation_no}
+                            {
+                              item.quotation_no
+                            }
                           </strong>
                         </td>
 
@@ -334,8 +546,11 @@ export default function CostListingsPage() {
 
                         <td>
                           {Number(
-                            item.gross_margin || 0
-                          ).toFixed(1)}
+                            item.gross_margin ||
+                              0
+                          ).toFixed(
+                            1
+                          )}
                           %
                         </td>
 
@@ -357,24 +572,30 @@ export default function CostListingsPage() {
                               View
                             </Link>
 
-                            <Link
-                              href={`/quotations/${item.id}/edit`}
-                              className="actionButton"
-                            >
-                              Edit
-                            </Link>
+                            {canUserEdit(
+                              item
+                            ) && (
+                              <Link
+                                href={`/quotations/${item.id}/edit`}
+                                className="actionButton"
+                              >
+                                Edit
+                              </Link>
+                            )}
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                deleteCosting(
-                                  item
-                                )
-                              }
-                              className="actionButton deleteButton"
-                            >
-                              Delete
-                            </button>
+                            {canUserDelete() && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  deleteCosting(
+                                    item
+                                  )
+                                }
+                                className="actionButton deleteButton"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -388,13 +609,17 @@ export default function CostListingsPage() {
               {filteredCostings.map(
                 (item) => (
                   <div
-                    key={item.id}
+                    key={
+                      item.id
+                    }
                     className="costingCard"
                   >
                     <div className="cardTop">
                       <div>
                         <div className="costingNo">
-                          {item.quotation_no}
+                          {
+                            item.quotation_no
+                          }
                         </div>
 
                         <div className="costingDate">
@@ -442,7 +667,9 @@ export default function CostListingsPage() {
                         value={`${Number(
                           item.gross_margin ||
                             0
-                        ).toFixed(1)}%`}
+                        ).toFixed(
+                          1
+                        )}%`}
                       />
                     </div>
 
@@ -454,22 +681,30 @@ export default function CostListingsPage() {
                         View
                       </Link>
 
-                      <Link
-                        href={`/quotations/${item.id}/edit`}
-                        className="mobileButton"
-                      >
-                        Edit
-                      </Link>
+                      {canUserEdit(
+                        item
+                      ) && (
+                        <Link
+                          href={`/quotations/${item.id}/edit`}
+                          className="mobileButton"
+                        >
+                          Edit
+                        </Link>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          deleteCosting(item)
-                        }
-                        className="mobileButton deleteButton"
-                      >
-                        Delete
-                      </button>
+                      {canUserDelete() && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteCosting(
+                              item
+                            )
+                          }
+                          className="mobileButton deleteButton"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -478,12 +713,20 @@ export default function CostListingsPage() {
           </>
         )}
 
-      <Link
-        href="/calculator"
-        className="newCostingButton"
-      >
-        + New Costing
-      </Link>
+      {profile &&
+        (
+          profile.role ===
+            'admin' ||
+          profile.role ===
+            'estimator'
+        ) && (
+          <Link
+            href="/calculator"
+            className="newCostingButton"
+          >
+            + New Costing
+          </Link>
+        )}
 
       <nav className="bottomNav">
         <BottomNavItem
@@ -498,17 +741,36 @@ export default function CostListingsPage() {
           label="Costing"
         />
 
-        <BottomNavItem
-          href="/materials"
-          icon="📦"
-          label="Material"
-        />
+        {profile?.role ===
+        'admin' ? (
+          <BottomNavItem
+            href="/materials"
+            icon="📦"
+            label="Material"
+          />
+        ) : (
+          <BottomNavItem
+            href="/cost-listings"
+            icon="📋"
+            label="Listings"
+            active
+          />
+        )}
 
-        <BottomNavItem
-          href="/approvals"
-          icon="✅"
-          label="Approval"
-        />
+        {profile?.role ===
+        'admin' ? (
+          <BottomNavItem
+            href="/approvals"
+            icon="✅"
+            label="Approval"
+          />
+        ) : (
+          <BottomNavItem
+            href="/cost-listings"
+            icon="📄"
+            label="Records"
+          />
+        )}
 
         <BottomNavItem
           href="/profile"
@@ -577,10 +839,11 @@ export default function CostListingsPage() {
 
         .summaryRow {
           display: grid;
-          grid-template-columns: repeat(
-            2,
-            minmax(0, 1fr)
-          );
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
           gap: 10px;
           margin-bottom: 14px;
         }
@@ -769,7 +1032,10 @@ export default function CostListingsPage() {
         .costGrid {
           display: grid;
           grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+            repeat(
+              3,
+              minmax(0, 1fr)
+            );
           gap: 8px;
           margin-top: 16px;
           background: #f8fafc;
@@ -791,14 +1057,13 @@ export default function CostListingsPage() {
         }
 
         .mobileActions {
-          display: grid;
-          grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+          display: flex;
           gap: 8px;
           margin-top: 14px;
         }
 
         .mobileButton {
+          flex: 1;
           text-align: center;
         }
 
@@ -866,6 +1131,10 @@ export default function CostListingsPage() {
           gap: 3px;
           font-size: 10px;
           font-weight: 600;
+        }
+
+        .navItemActive {
+          color: #0f766e;
         }
 
         .navIcon {
@@ -952,15 +1221,21 @@ function BottomNavItem({
   href,
   icon,
   label,
+  active = false,
 }: {
   href: string
   icon: string
   label: string
+  active?: boolean
 }) {
   return (
     <Link
       href={href}
-      className="navItem"
+      className={
+        active
+          ? 'navItem navItemActive'
+          : 'navItem'
+      }
     >
       <span className="navIcon">
         {icon}

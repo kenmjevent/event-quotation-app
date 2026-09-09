@@ -1,12 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/supabase'
+import {
+  getCurrentProfile,
+  type UserProfile,
+  canCreateCosting,
+  canManageMaterials,
+  canApproveCosting,
+  canViewActivity,
+} from '../../lib/authRole'
 
 type ActivityLog = {
   id: string
-  quotation_no: string
+  quotation_no: string | null
   action: string
   details: string | null
   performed_by: string | null
@@ -18,12 +26,13 @@ type ApprovalItem = {
   quotation_no: string
   customer_name: string | null
   project_name: string | null
-  status: string
+  status: string | null
   created_at: string
 }
 
-const quickMenus = [
+const allQuickMenus = [
   {
+    key: 'calculator',
     title: 'Cost Calculator',
     subtitle: 'Create costing',
     icon: '🧮',
@@ -32,6 +41,7 @@ const quickMenus = [
     iconBg: '#22C55E',
   },
   {
+    key: 'materials',
     title: 'Material Setup',
     subtitle: 'Manage materials',
     icon: '📦',
@@ -40,14 +50,16 @@ const quickMenus = [
     iconBg: '#3B82F6',
   },
   {
+    key: 'cost-listings',
     title: 'Cost Listings',
-    subtitle: 'View cost items',
+    subtitle: 'View saved costings',
     icon: '📋',
     href: '/cost-listings',
     bg: '#FFF4E8',
     iconBg: '#F97316',
   },
   {
+    key: 'approvals',
     title: 'Approval Status',
     subtitle: 'Pending / Approved',
     icon: '✅',
@@ -56,6 +68,7 @@ const quickMenus = [
     iconBg: '#A855F7',
   },
   {
+    key: 'activity',
     title: 'Activity Log',
     subtitle: 'Recent system actions',
     icon: '🕘',
@@ -64,8 +77,9 @@ const quickMenus = [
     iconBg: '#E11D48',
   },
   {
+    key: 'profile',
     title: 'User Profile',
-    subtitle: 'Account settings',
+    subtitle: 'Account information',
     icon: '👤',
     href: '/profile',
     bg: '#ECFEFF',
@@ -74,6 +88,8 @@ const quickMenus = [
 ]
 
 export default function HomePage() {
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+
   const [totalCostings, setTotalCostings] = useState(0)
   const [pendingCount, setPendingCount] = useState(0)
   const [materialsCount, setMaterialsCount] = useState(0)
@@ -86,14 +102,22 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    loadDashboard()
+    loadPage()
   }, [])
 
-  async function loadDashboard() {
+  async function loadPage() {
     setLoading(true)
     setErrorMessage('')
 
     try {
+      const userProfile = await getCurrentProfile()
+
+      if (!userProfile) {
+        throw new Error('Unable to load user profile.')
+      }
+
+      setProfile(userProfile)
+
       const [
         totalResult,
         pendingResult,
@@ -135,9 +159,14 @@ export default function HomePage() {
 
         supabase
           .from('quotation_logs')
-          .select(
-            'id, quotation_no, action, details, performed_by, created_at'
-          )
+          .select(`
+            id,
+            quotation_no,
+            action,
+            details,
+            performed_by,
+            created_at
+          `)
           .order('created_at', {
             ascending: false,
           })
@@ -145,9 +174,14 @@ export default function HomePage() {
 
         supabase
           .from('quotations')
-          .select(
-            'id, quotation_no, customer_name, project_name, status, created_at'
-          )
+          .select(`
+            id,
+            quotation_no,
+            customer_name,
+            project_name,
+            status,
+            created_at
+          `)
           .in('status', ['pending', 'approved'])
           .order('created_at', {
             ascending: false,
@@ -173,12 +207,45 @@ export default function HomePage() {
       console.error('Dashboard load error:', error)
 
       setErrorMessage(
-        error?.message || 'Unable to load dashboard data.'
+        error?.message ||
+          'Unable to load dashboard data.'
       )
     } finally {
       setLoading(false)
     }
   }
+
+  const quickMenus = useMemo(() => {
+    if (!profile) return []
+
+    return allQuickMenus.filter((item) => {
+      if (item.key === 'calculator') {
+        return canCreateCosting(profile.role)
+      }
+
+      if (item.key === 'materials') {
+        return canManageMaterials(profile.role)
+      }
+
+      if (item.key === 'approvals') {
+        return canApproveCosting(profile.role)
+      }
+
+      if (item.key === 'activity') {
+        return canViewActivity(profile.role)
+      }
+
+      if (item.key === 'cost-listings') {
+        return true
+      }
+
+      if (item.key === 'profile') {
+        return true
+      }
+
+      return false
+    })
+  }, [profile])
 
   function formatTime(value: string) {
     return new Date(value).toLocaleTimeString('en-MY', {
@@ -188,18 +255,32 @@ export default function HomePage() {
   }
 
   function getActivityType(action: string) {
-    const value = action.toLowerCase()
+    const value = String(action || '').toLowerCase()
 
     if (value === 'delete') return 'delete'
-    if (value === 'edit' || value === 'update') return 'edit'
-    if (value === 'approve' || value === 'approved') return 'approved'
+
+    if (
+      value === 'edit' ||
+      value === 'update'
+    ) {
+      return 'edit'
+    }
+
+    if (
+      value === 'approve' ||
+      value === 'approved'
+    ) {
+      return 'approved'
+    }
+
     if (value === 'pending') return 'pending'
+    if (value === 'rejected') return 'rejected'
 
     return 'create'
   }
 
   function getActivityLabel(action: string) {
-    const value = action.toUpperCase()
+    const value = String(action || '').toUpperCase()
 
     if (value === 'CREATE') return 'Created'
     if (value === 'DELETE') return 'Deleted'
@@ -207,25 +288,47 @@ export default function HomePage() {
     if (value === 'UPDATE') return 'Updated'
     if (value === 'APPROVED') return 'Approved'
     if (value === 'PENDING') return 'Pending'
+    if (value === 'REJECTED') return 'Rejected'
 
-    return value
+    return value || 'Action'
+  }
+
+  function roleLabel(role?: string) {
+    if (!role) return ''
+
+    if (role === 'admin') return 'Admin'
+    if (role === 'estimator') return 'Estimator'
+    if (role === 'manager') return 'Manager'
+    if (role === 'viewer') return 'Viewer'
+
+    return role
   }
 
   return (
     <main className="page">
-      {/* HEADER */}
       <section className="hero">
         <div className="heroInner">
           <div>
             <div className="welcome">
               Welcome back
+              {profile?.full_name
+                ? `, ${profile.full_name}`
+                : ''}
             </div>
 
-            <h1>Event Costing</h1>
+            <h1>
+              Event Costing
+            </h1>
 
             <p className="heroText">
               Internal costing & approval system
             </p>
+
+            {profile && (
+              <div className="roleBadge">
+                {roleLabel(profile.role)}
+              </div>
+            )}
           </div>
 
           <Link
@@ -237,7 +340,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SUMMARY */}
       <section className="summarySection">
         <div className="summaryGrid">
           <SummaryCard
@@ -285,10 +387,13 @@ export default function HomePage() {
       {errorMessage && (
         <section className="section">
           <div className="errorBox">
-            {errorMessage}
+            <span>
+              {errorMessage}
+            </span>
 
             <button
-              onClick={loadDashboard}
+              type="button"
+              onClick={loadPage}
               className="retryButton"
             >
               Retry
@@ -297,14 +402,15 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* QUICK ACCESS */}
       <section className="section">
         <div className="sectionHeader">
           <div>
-            <h2>Quick Access</h2>
+            <h2>
+              Quick Access
+            </h2>
 
             <p>
-              Tap a module to continue
+              Available modules for your role
             </p>
           </div>
         </div>
@@ -312,7 +418,7 @@ export default function HomePage() {
         <div className="quickGrid">
           {quickMenus.map((item) => (
             <Link
-              key={item.title}
+              key={item.key}
               href={item.href}
               className="quickCard"
               style={{
@@ -340,157 +446,188 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* RECENT ACTIVITY */}
-      <section className="section">
-        <div className="card">
-          <div className="sectionHeader rowHeader">
-            <div>
-              <h2>
-                Recent Activity
-              </h2>
+      {profile &&
+        canViewActivity(profile.role) && (
+          <section className="section">
+            <div className="card">
+              <div className="sectionHeader rowHeader">
+                <div>
+                  <h2>
+                    Recent Activity
+                  </h2>
 
-              <p>
-                Latest system actions
-              </p>
-            </div>
+                  <p>
+                    Latest system actions
+                  </p>
+                </div>
 
-            <Link
-              href="/activity"
-              className="viewAll"
-            >
-              View all
-            </Link>
-          </div>
+                <Link
+                  href="/activity"
+                  className="viewAll"
+                >
+                  View all
+                </Link>
+              </div>
 
-          {activities.length === 0 && !loading ? (
-            <div className="emptyState">
-              No recent activity.
-            </div>
-          ) : (
-            <div className="activityList">
-              {activities.map((item) => {
-                const type =
-                  getActivityType(
-                    item.action
-                  )
+              {loading && (
+                <div className="emptyState">
+                  Loading activity...
+                </div>
+              )}
 
-                return (
-                  <div
-                    key={item.id}
-                    className="activityRow"
-                  >
-                    <div className="activityLeft">
-                      <span
-                        className={`badge badge-${type}`}
-                      >
-                        {getActivityLabel(
+              {!loading &&
+                activities.length === 0 && (
+                  <div className="emptyState">
+                    No recent activity.
+                  </div>
+                )}
+
+              {!loading &&
+                activities.length > 0 && (
+                  <div className="activityList">
+                    {activities.map((item) => {
+                      const type =
+                        getActivityType(
                           item.action
-                        )}
-                      </span>
+                        )
 
-                      <div className="activityContent">
-                        <strong>
-                          {item.quotation_no}
-                        </strong>
+                      return (
+                        <div
+                          key={item.id}
+                          className="activityRow"
+                        >
+                          <div className="activityLeft">
+                            <span
+                              className={`badge badge-${type}`}
+                            >
+                              {getActivityLabel(
+                                item.action
+                              )}
+                            </span>
 
-                        <span>
-                          {item.details ||
-                            '-'}
-                        </span>
-                      </div>
-                    </div>
+                            <div className="activityContent">
+                              <strong>
+                                {item.quotation_no ||
+                                  '-'}
+                              </strong>
 
-                    <div className="activityTime">
-                      {formatTime(
-                        item.created_at
-                      )}
-                    </div>
+                              <span>
+                                {item.details ||
+                                  '-'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="activityTime">
+                            {formatTime(
+                              item.created_at
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                )}
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+        )}
 
-      {/* APPROVAL */}
-      <section className="section bottomSection">
-        <div className="card">
-          <div className="sectionHeader rowHeader">
-            <div>
-              <h2>
-                Approval Status
-              </h2>
+      {profile &&
+        canApproveCosting(profile.role) && (
+          <section className="section bottomSection">
+            <div className="card">
+              <div className="sectionHeader rowHeader">
+                <div>
+                  <h2>
+                    Approval Status
+                  </h2>
 
-              <p>
-                Latest approval progress
-              </p>
-            </div>
+                  <p>
+                    Latest approval progress
+                  </p>
+                </div>
 
-            <Link
-              href="/approvals"
-              className="viewAll"
-            >
-              View all
-            </Link>
-          </div>
+                <Link
+                  href="/approvals"
+                  className="viewAll"
+                >
+                  View all
+                </Link>
+              </div>
 
-          {approvals.length === 0 && !loading ? (
-            <div className="emptyState">
-              No pending or approved costings yet.
-            </div>
-          ) : (
-            <div className="approvalList">
-              {approvals.map((item) => {
-                const approved =
-                  item.status.toLowerCase() ===
-                  'approved'
+              {loading && (
+                <div className="emptyState">
+                  Loading approvals...
+                </div>
+              )}
 
-                const color = approved
-                  ? '#10B981'
-                  : '#F59E0B'
-
-                return (
-                  <div
-                    key={item.id}
-                    className="approvalRow"
-                  >
-                    <div>
-                      <div className="approvalCode">
-                        {item.quotation_no}
-                      </div>
-
-                      <div className="approvalProject">
-                        {item.customer_name
-                          ? `${item.customer_name} · `
-                          : ''}
-
-                        {item.project_name ||
-                          '-'}
-                      </div>
-                    </div>
-
-                    <span
-                      className="approvalBadge"
-                      style={{
-                        background:
-                          `${color}22`,
-                        color,
-                      }}
-                    >
-                      {approved
-                        ? 'Approved'
-                        : 'Pending'}
-                    </span>
+              {!loading &&
+                approvals.length === 0 && (
+                  <div className="emptyState">
+                    No pending or approved costings yet.
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </section>
+                )}
 
-      {/* BOTTOM NAV */}
+              {!loading &&
+                approvals.length > 0 && (
+                  <div className="approvalList">
+                    {approvals.map((item) => {
+                      const status =
+                        String(
+                          item.status ||
+                            'pending'
+                        ).toLowerCase()
+
+                      const approved =
+                        status ===
+                        'approved'
+
+                      const color =
+                        approved
+                          ? '#10B981'
+                          : '#F59E0B'
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="approvalRow"
+                        >
+                          <div className="approvalInfo">
+                            <div className="approvalCode">
+                              {item.quotation_no}
+                            </div>
+
+                            <div className="approvalProject">
+                              {item.customer_name
+                                ? `${item.customer_name} · `
+                                : ''}
+
+                              {item.project_name ||
+                                '-'}
+                            </div>
+                          </div>
+
+                          <span
+                            className="approvalBadge"
+                            style={{
+                              background:
+                                `${color}22`,
+                              color,
+                            }}
+                          >
+                            {approved
+                              ? 'Approved'
+                              : 'Pending'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+            </div>
+          </section>
+        )}
+
       <nav className="bottomNav">
         <BottomNavItem
           href="/"
@@ -499,23 +636,50 @@ export default function HomePage() {
           active
         />
 
-        <BottomNavItem
-          href="/calculator"
-          icon="🧮"
-          label="Costing"
-        />
+        {profile &&
+          canCreateCosting(profile.role) ? (
+            <BottomNavItem
+              href="/calculator"
+              icon="🧮"
+              label="Costing"
+            />
+          ) : (
+            <BottomNavItem
+              href="/cost-listings"
+              icon="📋"
+              label="Costings"
+            />
+          )}
 
-        <BottomNavItem
-          href="/materials"
-          icon="📦"
-          label="Material"
-        />
+        {profile &&
+        canManageMaterials(profile.role) ? (
+          <BottomNavItem
+            href="/materials"
+            icon="📦"
+            label="Material"
+          />
+        ) : (
+          <BottomNavItem
+            href="/cost-listings"
+            icon="📋"
+            label="Listings"
+          />
+        )}
 
-        <BottomNavItem
-          href="/approvals"
-          icon="✅"
-          label="Approval"
-        />
+        {profile &&
+        canApproveCosting(profile.role) ? (
+          <BottomNavItem
+            href="/approvals"
+            icon="✅"
+            label="Approval"
+          />
+        ) : (
+          <BottomNavItem
+            href="/cost-listings"
+            icon="📄"
+            label="Records"
+          />
+        )}
 
         <BottomNavItem
           href="/profile"
@@ -555,11 +719,12 @@ export default function HomePage() {
         }
 
         .hero {
-          background: linear-gradient(
-            135deg,
-            #0f766e,
-            #0d9488
-          );
+          background:
+            linear-gradient(
+              135deg,
+              #0f766e,
+              #0d9488
+            );
           color: white;
           padding: 26px 18px 78px;
           border-bottom-left-radius: 30px;
@@ -593,13 +758,28 @@ export default function HomePage() {
           opacity: 0.9;
         }
 
+        .roleBadge {
+          display: inline-flex;
+          margin-top: 11px;
+          padding: 5px 10px;
+          border-radius: 999px;
+          background:
+            rgba(255, 255, 255, 0.18);
+          border:
+            1px solid
+            rgba(255, 255, 255, 0.25);
+          font-size: 11px;
+          font-weight: 700;
+        }
+
         .avatarButton {
           width: 48px;
           height: 48px;
           border-radius: 50%;
           background:
             rgba(255, 255, 255, 0.2);
-          border: 1px solid
+          border:
+            1px solid
             rgba(255, 255, 255, 0.3);
           display: flex;
           align-items: center;
@@ -626,8 +806,7 @@ export default function HomePage() {
           background: white;
           border-radius: 17px;
           padding: 14px;
-          border:
-            1px solid #edf0f5;
+          border: 1px solid #edf0f5;
           box-shadow:
             0 5px 18px
             rgba(15, 23, 42, 0.07);
@@ -679,8 +858,7 @@ export default function HomePage() {
 
         .rowHeader {
           display: flex;
-          justify-content:
-            space-between;
+          justify-content: space-between;
           align-items: center;
           gap: 12px;
         }
@@ -706,8 +884,8 @@ export default function HomePage() {
           border-radius: 20px;
           padding: 16px;
           min-height: 145px;
-          border: 1px solid
-            rgba(0, 0, 0, 0.04);
+          border:
+            1px solid rgba(0, 0, 0, 0.04);
           box-shadow:
             0 5px 16px
             rgba(15, 23, 42, 0.05);
@@ -741,8 +919,7 @@ export default function HomePage() {
           background: white;
           border-radius: 20px;
           padding: 18px;
-          border:
-            1px solid #edf0f5;
+          border: 1px solid #edf0f5;
           box-shadow:
             0 6px 20px
             rgba(15, 23, 42, 0.05);
@@ -754,8 +931,7 @@ export default function HomePage() {
 
         .activityRow {
           display: flex;
-          justify-content:
-            space-between;
+          justify-content: space-between;
           align-items: center;
           gap: 12px;
           padding: 14px 0;
@@ -836,6 +1012,11 @@ export default function HomePage() {
           color: #047857;
         }
 
+        .badge-rejected {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
         .approvalList {
           display: grid;
           gap: 10px;
@@ -843,14 +1024,17 @@ export default function HomePage() {
 
         .approvalRow {
           display: flex;
-          justify-content:
-            space-between;
+          justify-content: space-between;
           align-items: center;
           gap: 12px;
           border:
             1px solid #edf0f3;
           border-radius: 14px;
           padding: 13px;
+        }
+
+        .approvalInfo {
+          min-width: 0;
         }
 
         .approvalCode {
@@ -863,6 +1047,8 @@ export default function HomePage() {
           margin-top: 4px;
           font-size: 12px;
           color: #6b7280;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .approvalBadge {
@@ -871,6 +1057,7 @@ export default function HomePage() {
           font-size: 11px;
           font-weight: 700;
           white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .emptyState {
@@ -886,8 +1073,7 @@ export default function HomePage() {
           padding: 14px;
           font-size: 13px;
           display: flex;
-          justify-content:
-            space-between;
+          justify-content: space-between;
           align-items: center;
           gap: 10px;
         }
@@ -933,6 +1119,7 @@ export default function HomePage() {
           gap: 3px;
           font-size: 10px;
           font-weight: 600;
+          min-width: 0;
         }
 
         .navItemActive {
@@ -1004,24 +1191,32 @@ export default function HomePage() {
           .activityRow {
             align-items:
               flex-start;
+            flex-wrap: wrap;
           }
 
           .activityLeft {
             align-items:
               flex-start;
+            width: 100%;
+          }
+
+          .activityContent {
+            flex: 1;
           }
 
           .activityContent span {
-            max-width: 145px;
+            max-width: 180px;
+          }
+
+          .activityTime {
+            width: 100%;
+            text-align: right;
+            font-size: 10px;
           }
 
           .badge {
             font-size: 10px;
             padding: 5px 7px;
-          }
-
-          .activityTime {
-            font-size: 10px;
           }
         }
       `}</style>

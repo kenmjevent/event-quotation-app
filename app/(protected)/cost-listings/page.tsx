@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+
 import { supabase } from '../../../lib/supabase'
 
 import {
@@ -92,10 +93,7 @@ export default function CostListingsPage() {
         })
 
     if (error) {
-      setErrorMessage(
-        error.message
-      )
-
+      setErrorMessage(error.message)
       return
     }
 
@@ -168,14 +166,6 @@ export default function CostListingsPage() {
         item.status || 'draft'
       ).toLowerCase()
 
-    /*
-      ADMIN:
-      Can edit any status.
-
-      ESTIMATOR:
-      Can only edit draft
-      or rejected costing.
-    */
     if (
       profile.role === 'admin'
     ) {
@@ -210,7 +200,6 @@ export default function CostListingsPage() {
       alert(
         'Only Admin can delete costing.'
       )
-
       return
     }
 
@@ -262,9 +251,12 @@ export default function CostListingsPage() {
         )
         .insert({
           quotation_id: null,
+
           quotation_no:
             item.quotation_no,
+
           action: 'DELETE',
+
           details:
             `Deleted costing - ${
               item.customer_name ||
@@ -273,6 +265,7 @@ export default function CostListingsPage() {
               item.project_name ||
               ''
             }`.trim(),
+
           performed_by:
             profile?.full_name ||
             profile?.email ||
@@ -370,9 +363,7 @@ export default function CostListingsPage() {
           </div>
 
           <div className="summaryValue">
-            {
-              filteredCostings.length
-            }
+            {filteredCostings.length}
           </div>
         </div>
       </section>
@@ -462,41 +453,15 @@ export default function CostListingsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>
-                      Costing No.
-                    </th>
-
-                    <th>
-                      Date
-                    </th>
-
-                    <th>
-                      Customer
-                    </th>
-
-                    <th>
-                      Project
-                    </th>
-
-                    <th>
-                      Total Cost
-                    </th>
-
-                    <th>
-                      Selling
-                    </th>
-
-                    <th>
-                      Margin
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-
-                    <th>
-                      Actions
-                    </th>
+                    <th>Costing No.</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Project</th>
+                    <th>Total Cost</th>
+                    <th>Selling</th>
+                    <th>Margin</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
 
@@ -509,7 +474,7 @@ export default function CostListingsPage() {
                         }
                       >
                         <td>
-                          <strong>
+                          <strong className="costingNoDesktop">
                             {
                               item.quotation_no
                             }
@@ -539,9 +504,11 @@ export default function CostListingsPage() {
                         </td>
 
                         <td>
-                          {formatRM(
-                            item.selling_price
-                          )}
+                          <strong className="sellingText">
+                            {formatRM(
+                              item.selling_price
+                            )}
+                          </strong>
                         </td>
 
                         <td>
@@ -567,7 +534,7 @@ export default function CostListingsPage() {
                           <div className="actions">
                             <Link
                               href={`/quotations/${item.id}`}
-                              className="actionButton"
+                              className="viewButton"
                             >
                               View
                             </Link>
@@ -577,7 +544,7 @@ export default function CostListingsPage() {
                             ) && (
                               <Link
                                 href={`/quotations/${item.id}/edit`}
-                                className="actionButton"
+                                className="editButton"
                               >
                                 Edit
                               </Link>
@@ -591,7 +558,7 @@ export default function CostListingsPage() {
                                     item
                                   )
                                 }
-                                className="actionButton deleteButton"
+                                className="deleteButton"
                               >
                                 Delete
                               </button>
@@ -676,7 +643,7 @@ export default function CostListingsPage() {
                     <div className="mobileActions">
                       <Link
                         href={`/quotations/${item.id}`}
-                        className="mobileButton"
+                        className="mobileViewButton"
                       >
                         View
                       </Link>
@@ -686,7 +653,7 @@ export default function CostListingsPage() {
                       ) && (
                         <Link
                           href={`/quotations/${item.id}/edit`}
-                          className="mobileButton"
+                          className="mobileEditButton"
                         >
                           Edit
                         </Link>
@@ -700,7 +667,7 @@ export default function CostListingsPage() {
                               item
                             )
                           }
-                          className="mobileButton deleteButton"
+                          className="mobileDeleteButton"
                         >
                           Delete
                         </button>
@@ -788,8 +755,9 @@ export default function CostListingsPage() {
         body {
           margin: 0;
           padding: 0;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background: var(--mj-background);
+          color: var(--mj-text);
+          font-family: Arial, Helvetica, sans-serif;
         }
 
         body {
@@ -815,26 +783,29 @@ export default function CostListingsPage() {
           height: 42px;
           border-radius: 12px;
           background: white;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--mj-border);
           display: flex;
           align-items: center;
           justify-content: center;
           text-decoration: none;
-          color: #0f766e;
+          color: var(--mj-primary);
           font-size: 24px;
           font-weight: 800;
+          box-shadow:
+            0 5px 15px
+            rgba(7, 89, 133, 0.06);
         }
 
         .topTitle {
           font-size: 24px;
           font-weight: 800;
-          color: #111827;
+          color: var(--mj-text);
         }
 
         .topSubtitle {
           margin-top: 3px;
           font-size: 13px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         .summaryRow {
@@ -852,19 +823,22 @@ export default function CostListingsPage() {
           background: white;
           border-radius: 16px;
           padding: 14px;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
+          box-shadow:
+            0 8px 22px
+            rgba(7, 89, 133, 0.045);
         }
 
         .summaryLabel {
           font-size: 12px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         .summaryValue {
           margin-top: 4px;
           font-size: 23px;
           font-weight: 800;
-          color: #111827;
+          color: var(--mj-primary-deep);
         }
 
         .filterCard {
@@ -876,9 +850,12 @@ export default function CostListingsPage() {
           gap: 10px;
           background: white;
           padding: 14px;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           border-radius: 16px;
           margin-bottom: 16px;
+          box-shadow:
+            0 8px 22px
+            rgba(7, 89, 133, 0.04);
         }
 
         .searchInput,
@@ -886,17 +863,32 @@ export default function CostListingsPage() {
           width: 100%;
           min-width: 0;
           padding: 11px 12px;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--mj-border);
           border-radius: 10px;
           background: white;
+          color: var(--mj-text);
           font-size: 14px;
+          outline: none;
+        }
+
+        .searchInput:focus,
+        .statusSelect:focus {
+          border-color: var(--mj-primary);
+          box-shadow:
+            0 0 0 3px
+            rgba(7, 152, 212, 0.1);
         }
 
         .refreshButton {
           border: none;
           border-radius: 10px;
           padding: 0 14px;
-          background: #0f766e;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
           color: white;
           font-weight: 700;
           cursor: pointer;
@@ -905,8 +897,11 @@ export default function CostListingsPage() {
         .desktopTable {
           overflow-x: auto;
           background: white;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           border-radius: 18px;
+          box-shadow:
+            0 8px 24px
+            rgba(7, 89, 133, 0.045);
         }
 
         table {
@@ -917,17 +912,26 @@ export default function CostListingsPage() {
 
         th {
           text-align: left;
-          background: #f8fafc;
+          background: var(--mj-light);
           padding: 13px;
           font-size: 12px;
-          color: #4b5563;
+          color: var(--mj-primary-deep);
         }
 
         td {
           padding: 13px;
-          border-top: 1px solid #edf0f3;
+          border-top: 1px solid #eaf2f7;
           font-size: 13px;
-          color: #111827;
+          color: #334155;
+        }
+
+        tbody tr:hover {
+          background: #fbfdff;
+        }
+
+        .costingNoDesktop,
+        .sellingText {
+          color: var(--mj-primary-deep);
         }
 
         .actions {
@@ -936,12 +940,13 @@ export default function CostListingsPage() {
           gap: 6px;
         }
 
-        .actionButton,
-        .mobileButton {
+        .viewButton,
+        .editButton,
+        .deleteButton,
+        .mobileViewButton,
+        .mobileEditButton,
+        .mobileDeleteButton {
           text-decoration: none;
-          border: 1px solid #d1d5db;
-          background: white;
-          color: #374151;
           border-radius: 8px;
           padding: 7px 9px;
           font-size: 12px;
@@ -949,9 +954,25 @@ export default function CostListingsPage() {
           cursor: pointer;
         }
 
-        .deleteButton {
-          color: #b91c1c;
-          border-color: #fecaca;
+        .viewButton,
+        .mobileViewButton {
+          border: 1px solid var(--mj-primary);
+          background: var(--mj-primary);
+          color: white;
+        }
+
+        .editButton,
+        .mobileEditButton {
+          border: 1px solid var(--mj-primary);
+          background: var(--mj-light);
+          color: var(--mj-primary-deep);
+        }
+
+        .deleteButton,
+        .mobileDeleteButton {
+          color: #991b1b;
+          background: #fee2e2;
+          border: 1px solid #fecaca;
         }
 
         .statusBadge {
@@ -964,23 +985,23 @@ export default function CostListingsPage() {
         }
 
         .statusDraft {
-          background: #f3f4f6;
-          color: #4b5563;
+          background: var(--status-draft-bg);
+          color: var(--status-draft-text);
         }
 
         .statusPending {
-          background: #fef3c7;
-          color: #92400e;
+          background: var(--status-pending-bg);
+          color: var(--status-pending-text);
         }
 
         .statusApproved {
-          background: #dcfce7;
-          color: #166534;
+          background: var(--status-approved-bg);
+          color: var(--status-approved-text);
         }
 
         .statusRejected {
-          background: #fee2e2;
-          color: #991b1b;
+          background: var(--status-rejected-bg);
+          color: var(--status-rejected-text);
         }
 
         .mobileCards {
@@ -988,13 +1009,18 @@ export default function CostListingsPage() {
         }
 
         .costingCard {
-          background: white;
-          border: 1px solid #e8ecf1;
+          background:
+            linear-gradient(
+              145deg,
+              #ffffff,
+              #f6fbff
+            );
+          border: 1px solid var(--mj-border);
           border-radius: 18px;
           padding: 15px;
           box-shadow:
-            0 4px 14px
-            rgba(15, 23, 42, 0.04);
+            0 6px 18px
+            rgba(7, 89, 133, 0.045);
         }
 
         .cardTop {
@@ -1007,26 +1033,26 @@ export default function CostListingsPage() {
         .costingNo {
           font-size: 16px;
           font-weight: 800;
-          color: #0f766e;
+          color: var(--mj-primary-deep);
         }
 
         .costingDate {
           margin-top: 3px;
           font-size: 11px;
-          color: #9ca3af;
+          color: #94a3b8;
         }
 
         .projectName {
           margin-top: 14px;
           font-size: 17px;
           font-weight: 800;
-          color: #111827;
+          color: var(--mj-text);
         }
 
         .customerName {
           margin-top: 4px;
           font-size: 13px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         .costGrid {
@@ -1038,21 +1064,21 @@ export default function CostListingsPage() {
             );
           gap: 8px;
           margin-top: 16px;
-          background: #f8fafc;
+          background: var(--mj-light);
           padding: 10px;
           border-radius: 12px;
         }
 
         .infoLabel {
           font-size: 10px;
-          color: #9ca3af;
+          color: #7c8a99;
         }
 
         .infoValue {
           margin-top: 4px;
           font-size: 12px;
           font-weight: 800;
-          color: #111827;
+          color: var(--mj-primary-deep);
           word-break: break-word;
         }
 
@@ -1062,7 +1088,9 @@ export default function CostListingsPage() {
           margin-top: 14px;
         }
 
-        .mobileButton {
+        .mobileViewButton,
+        .mobileEditButton,
+        .mobileDeleteButton {
           flex: 1;
           text-align: center;
         }
@@ -1072,19 +1100,27 @@ export default function CostListingsPage() {
           margin-top: 16px;
           padding: 14px;
           border-radius: 13px;
-          background: #0f766e;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
           color: white;
           font-weight: 800;
           text-align: center;
           text-decoration: none;
+          box-shadow:
+            0 9px 22px
+            rgba(7, 152, 212, 0.18);
         }
 
         .emptyCard {
           background: white;
           border-radius: 16px;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           padding: 22px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         .errorBox,
@@ -1114,11 +1150,14 @@ export default function CostListingsPage() {
           height: 72px;
           background:
             rgba(255, 255, 255, 0.97);
-          border-top: 1px solid #e5e7eb;
+          border-top: 1px solid var(--mj-border);
           display: grid;
           grid-template-columns:
             repeat(5, 1fr);
           z-index: 999;
+          box-shadow:
+            0 -5px 20px
+            rgba(7, 89, 133, 0.055);
         }
 
         .navItem {
@@ -1134,7 +1173,7 @@ export default function CostListingsPage() {
         }
 
         .navItemActive {
-          color: #0f766e;
+          color: var(--mj-primary);
         }
 
         .navIcon {
@@ -1159,6 +1198,19 @@ export default function CostListingsPage() {
             gap: 12px;
           }
         }
+
+        @media (max-width: 420px) {
+          .page {
+            padding:
+              14px
+              12px
+              40px;
+          }
+
+          .mobileActions {
+            flex-direction: column;
+          }
+        }
       `}</style>
     </main>
   )
@@ -1175,17 +1227,23 @@ function StatusBadge({
   let className =
     'statusBadge statusDraft'
 
-  if (value === 'pending') {
+  if (
+    value === 'pending'
+  ) {
     className =
       'statusBadge statusPending'
   }
 
-  if (value === 'approved') {
+  if (
+    value === 'approved'
+  ) {
     className =
       'statusBadge statusApproved'
   }
 
-  if (value === 'rejected') {
+  if (
+    value === 'rejected'
+  ) {
     className =
       'statusBadge statusRejected'
   }

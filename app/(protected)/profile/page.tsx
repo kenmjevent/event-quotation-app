@@ -1,22 +1,51 @@
 'use client'
 
+import {
+  useEffect,
+  useState,
+} from 'react'
+
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../../lib/supabase'
+
+import {
+  supabase,
+} from '../../../lib/supabase'
+
 import {
   getCurrentProfile,
   type UserProfile,
 } from '../../../lib/authRole'
 
 export default function ProfilePage() {
-  const router = useRouter()
+  const router =
+    useRouter()
 
-  const [profile, setProfile] =
-    useState<UserProfile | null>(null)
+  const [
+    profile,
+    setProfile,
+  ] =
+    useState<UserProfile | null>(
+      null
+    )
 
-  const [loading, setLoading] = useState(true)
-  const [signingOut, setSigningOut] = useState(false)
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(true)
+
+  const [
+    signingOut,
+    setSigningOut,
+  ] =
+    useState(false)
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] =
+    useState('')
 
   useEffect(() => {
     loadProfile()
@@ -24,43 +53,128 @@ export default function ProfilePage() {
 
   async function loadProfile() {
     setLoading(true)
+    setErrorMessage('')
 
-    const data = await getCurrentProfile()
+    try {
+      const currentProfile =
+        await getCurrentProfile()
 
-    setProfile(data)
-    setLoading(false)
+      if (!currentProfile) {
+        setErrorMessage(
+          'Unable to load user profile.'
+        )
+        return
+      }
+
+      setProfile(
+        currentProfile
+      )
+    } catch (
+      error: any
+    ) {
+      console.error(
+        'Profile load error:',
+        error
+      )
+
+      setErrorMessage(
+        error?.message ||
+          'Unable to load profile.'
+      )
+    } finally {
+      setLoading(false)
+    }
   }
 
-  async function handleSignOut() {
-    setSigningOut(true)
+  async function signOut() {
+    const confirmed =
+      window.confirm(
+        'Sign out from Event Costing?'
+      )
 
-    const { error } = await supabase.auth.signOut()
-
-    if (error) {
-      alert(`Sign out failed: ${error.message}`)
-      setSigningOut(false)
+    if (!confirmed) {
       return
     }
 
-    router.replace('/login')
-    router.refresh()
+    setSigningOut(true)
+    setErrorMessage('')
+
+    try {
+      const {
+        error,
+      } =
+        await supabase.auth.signOut()
+
+      if (error) {
+        throw error
+      }
+
+      router.replace(
+        '/login'
+      )
+
+      router.refresh()
+    } catch (
+      error: any
+    ) {
+      console.error(
+        'Sign out error:',
+        error
+      )
+
+      setErrorMessage(
+        error?.message ||
+          'Unable to sign out.'
+      )
+
+      setSigningOut(false)
+    }
   }
 
-  function roleLabel(role?: string) {
-    if (!role) return '-'
+  function getInitials() {
+    const name =
+      profile?.full_name?.trim()
 
-    if (role === 'admin') return 'Admin'
-    if (role === 'estimator') return 'Estimator'
-    if (role === 'manager') return 'Manager'
-    if (role === 'viewer') return 'Viewer'
+    if (!name) {
+      return 'U'
+    }
 
-    return role
+    const parts =
+      name
+        .split(/\s+/)
+        .filter(Boolean)
+
+    if (
+      parts.length === 1
+    ) {
+      return parts[0]
+        .slice(0, 2)
+        .toUpperCase()
+    }
+
+    return (
+      parts[0][0] +
+      parts[
+        parts.length - 1
+      ][0]
+    ).toUpperCase()
+  }
+
+  if (loading) {
+    return (
+      <main className="loadingPage">
+        Loading profile...
+      </main>
+    )
   }
 
   return (
     <main className="page">
       <header className="topBar">
-        <Link href="/" className="backButton">
+        <Link
+          href="/"
+          className="backButton"
+        >
           ←
         </Link>
 
@@ -70,411 +184,890 @@ export default function ProfilePage() {
           </div>
 
           <div className="topSubtitle">
-            Account & system information
+            Account information
           </div>
         </div>
       </header>
 
-      {loading ? (
-        <div className="card">
-          Loading profile...
-        </div>
-      ) : !profile ? (
+      {errorMessage && (
         <div className="errorBox">
-          Unable to load user profile.
+          {errorMessage}
         </div>
-      ) : (
+      )}
+
+      {profile && (
         <>
           <section className="profileHero">
             <div className="avatar">
-              👤
+              {getInitials()}
             </div>
 
-            <div>
-              <div className="profileName">
-                {profile.full_name || 'User'}
-              </div>
-
-              <div className="profileRole">
-                {roleLabel(profile.role)}
-              </div>
+            <div className="profileName">
+              {profile.full_name ||
+                'User'}
             </div>
-          </section>
 
-          <section className="card">
-            <h2>Profile Information</h2>
+            <div className="profileEmail">
+              {profile.email ||
+                '-'}
+            </div>
 
-            <InfoRow
-              label="Full Name"
-              value={profile.full_name || '-'}
-            />
+            <div className="badges">
+              <span className="roleBadge">
+                {profile.role ===
+                'admin'
+                  ? 'Admin'
+                  : 'Estimator'}
+              </span>
 
-            <InfoRow
-              label="Email"
-              value={profile.email || '-'}
-            />
-
-            <InfoRow
-              label="Role"
-              value={roleLabel(profile.role)}
-            />
-
-            <InfoRow
-              label="Department"
-              value={profile.department || '-'}
-            />
-          </section>
-
-          <section className="card">
-            <h2>Account Status</h2>
-
-            <div className="statusRow">
-              <div>
-                <div className="statusTitle">
-                  Account
-                </div>
-
-                <div className="statusSub">
-                  Current system access
-                </div>
-              </div>
-
-              <span
-                className={
-                  profile.is_active
-                    ? 'activeBadge'
-                    : 'inactiveBadge'
-                }
-              >
-                {profile.is_active
-                  ? 'Active'
-                  : 'Inactive'}
+              <span className="activeBadge">
+                Active
               </span>
             </div>
+          </section>
 
-            <div className="statusRow">
+          <section className="infoSection">
+            <div className="sectionHeader">
               <div>
-                <div className="statusTitle">
-                  Permission Level
-                </div>
+                <h2>
+                  Account Details
+                </h2>
 
-                <div className="statusSub">
-                  Based on assigned role
-                </div>
+                <p>
+                  Your internal user
+                  information
+                </p>
               </div>
+            </div>
 
-              <strong>
-                {roleLabel(profile.role)}
-              </strong>
+            <div className="infoGrid">
+              <InfoCard
+                icon="👤"
+                label="Full Name"
+                value={
+                  profile.full_name ||
+                  '-'
+                }
+              />
+
+              <InfoCard
+                icon="✉️"
+                label="Email"
+                value={
+                  profile.email ||
+                  '-'
+                }
+              />
+
+              <InfoCard
+                icon="🛡️"
+                label="Role"
+                value={
+                  profile.role ===
+                  'admin'
+                    ? 'Admin'
+                    : 'Estimator'
+                }
+              />
+
+              <InfoCard
+                icon="🏢"
+                label="Department"
+                value={
+                  profile.department ||
+                  '-'
+                }
+              />
             </div>
           </section>
 
-          <section className="card">
-            <h2>System</h2>
+          <section className="permissionSection">
+            <h2>
+              Access Level
+            </h2>
 
-            <InfoRow
-              label="Application"
-              value="Event Costing"
-            />
+            {profile.role ===
+            'admin' ? (
+              <div className="permissionBox">
+                <div className="permissionIcon">
+                  ✓
+                </div>
 
-            <InfoRow
-              label="Version"
-              value="1.0.0"
-            />
+                <div>
+                  <strong>
+                    Full Access
+                  </strong>
 
-            <InfoRow
-              label="Database"
-              value="Supabase"
-            />
+                  <p>
+                    Calculator,
+                    Materials,
+                    Cost Listings,
+                    Approval,
+                    Activity and
+                    Profile.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="permissionBox">
+                <div className="permissionIcon">
+                  ✓
+                </div>
 
-            <InfoRow
-              label="Authentication"
-              value="Supabase Auth"
-            />
+                <div>
+                  <strong>
+                    Estimator Access
+                  </strong>
+
+                  <p>
+                    Calculator,
+                    Cost Listings and
+                    Profile. Draft and
+                    rejected costings
+                    can be edited and
+                    resubmitted.
+                  </p>
+                </div>
+              </div>
+            )}
           </section>
+
+          <button
+            type="button"
+            onClick={
+              signOut
+            }
+            disabled={
+              signingOut
+            }
+            className="signOutButton"
+          >
+            {signingOut
+              ? 'Signing Out...'
+              : 'Sign Out'}
+          </button>
         </>
       )}
 
-      <button
-        type="button"
-        onClick={handleSignOut}
-        disabled={signingOut}
-        className="signOutButton"
-      >
-        {signingOut
-          ? 'Signing Out...'
-          : 'Sign Out'}
-      </button>
-
-      <nav className="bottomNav">
-        <BottomNavItem
-          href="/"
-          icon="🏠"
-          label="Home"
-        />
-
-        <BottomNavItem
-          href="/calculator"
-          icon="🧮"
-          label="Costing"
-        />
-
-        <BottomNavItem
-          href="/materials"
-          icon="📦"
-          label="Material"
-        />
-
-        <BottomNavItem
-          href="/approvals"
-          icon="✅"
-          label="Approval"
-        />
-
-        <BottomNavItem
-          href="/profile"
-          icon="👤"
-          label="Profile"
-          active
-        />
-      </nav>
-
       <style jsx global>{`
         * {
-          box-sizing: border-box;
+          box-sizing:
+            border-box;
         }
 
         html,
         body {
           margin: 0;
           padding: 0;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background:
+            var(--mj-background);
+          color:
+            var(--mj-text);
+          font-family:
+            Arial,
+            Helvetica,
+            sans-serif;
         }
 
-        body {
-          padding-bottom: 90px;
+        .loadingPage {
+          min-height:
+            100vh;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          background:
+            var(--mj-background);
+
+          color:
+            var(--mj-primary);
+
+          font-weight:
+            700;
         }
 
         .page {
-          min-height: 100vh;
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 18px 14px 40px;
+          min-height:
+            100vh;
+
+          max-width:
+            800px;
+
+          margin:
+            0 auto;
+
+          padding:
+            18px
+            14px
+            50px;
         }
 
         .topBar {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 18px;
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          gap:
+            12px;
+
+          margin-bottom:
+            18px;
         }
 
         .backButton {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          background: white;
-          border: 1px solid #e5e7eb;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-          color: #0f766e;
-          font-size: 24px;
-          font-weight: 800;
+          width:
+            42px;
+
+          height:
+            42px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          border-radius:
+            12px;
+
+          background:
+            white;
+
+          border:
+            1px solid
+            var(--mj-border);
+
+          color:
+            var(--mj-primary);
+
+          text-decoration:
+            none;
+
+          font-size:
+            24px;
+
+          font-weight:
+            800;
+
+          box-shadow:
+            0
+            5px
+            15px
+            rgba(
+              7,
+              89,
+              133,
+              0.06
+            );
         }
 
         .topTitle {
-          font-size: 24px;
-          font-weight: 800;
-          color: #111827;
+          font-size:
+            24px;
+
+          font-weight:
+            800;
+
+          color:
+            var(--mj-text);
         }
 
         .topSubtitle {
-          margin-top: 3px;
-          color: #6b7280;
-          font-size: 13px;
+          margin-top:
+            3px;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            13px;
         }
 
         .profileHero {
-          background: linear-gradient(
-            135deg,
-            #0f766e,
-            #0d9488
-          );
-          color: white;
-          border-radius: 20px;
-          padding: 20px;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          margin-bottom: 18px;
+          padding:
+            30px
+            20px;
+
+          border-radius:
+            24px;
+
+          text-align:
+            center;
+
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark),
+              var(--mj-primary-deep)
+            );
+
+          color:
+            white;
+
+          box-shadow:
+            0
+            14px
+            32px
+            rgba(
+              7,
+              89,
+              133,
+              0.18
+            );
         }
 
         .avatar {
-          width: 64px;
-          height: 64px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.2);
-          border: 1px solid rgba(255,255,255,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 30px;
+          width:
+            92px;
+
+          height:
+            92px;
+
+          margin:
+            0 auto;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          border-radius:
+            50%;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.18
+            );
+
+          border:
+            2px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.55
+            );
+
+          color:
+            white;
+
+          font-size:
+            30px;
+
+          font-weight:
+            800;
+
+          box-shadow:
+            0
+            8px
+            20px
+            rgba(
+              0,
+              0,
+              0,
+              0.08
+            );
         }
 
         .profileName {
-          font-size: 21px;
-          font-weight: 800;
+          margin-top:
+            17px;
+
+          font-size:
+            24px;
+
+          font-weight:
+            800;
         }
 
-        .profileRole {
-          margin-top: 4px;
-          opacity: 0.85;
-          font-size: 13px;
+        .profileEmail {
+          margin-top:
+            6px;
+
+          font-size:
+            13px;
+
+          opacity:
+            0.9;
+
+          word-break:
+            break-word;
         }
 
-        .card {
-          background: white;
-          border: 1px solid #e8ecf1;
-          border-radius: 18px;
-          padding: 17px;
-          margin-bottom: 16px;
-          box-shadow:
-            0 5px 18px
-            rgba(15,23,42,0.04);
+        .badges {
+          display:
+            flex;
+
+          justify-content:
+            center;
+
+          align-items:
+            center;
+
+          flex-wrap:
+            wrap;
+
+          gap:
+            8px;
+
+          margin-top:
+            16px;
         }
 
-        .card h2 {
-          margin: 0 0 16px;
-          font-size: 19px;
-          color: #111827;
-        }
+        .roleBadge {
+          display:
+            inline-flex;
 
-        .infoRow,
-        .statusRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 0;
-          border-bottom: 1px solid #edf0f3;
-        }
+          padding:
+            7px
+            13px;
 
-        .infoRow:last-child,
-        .statusRow:last-child {
-          border-bottom: none;
-        }
+          border-radius:
+            999px;
 
-        .infoLabel,
-        .statusTitle {
-          color: #111827;
-          font-size: 14px;
-          font-weight: 700;
-        }
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.18
+            );
 
-        .infoValue {
-          color: #6b7280;
-          font-size: 13px;
-          text-align: right;
-          word-break: break-word;
-        }
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.4
+            );
 
-        .statusSub {
-          margin-top: 3px;
-          color: #9ca3af;
-          font-size: 11px;
-        }
+          color:
+            white;
 
-        .activeBadge,
-        .inactiveBadge {
-          padding: 5px 9px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 800;
+          font-size:
+            11px;
+
+          font-weight:
+            800;
         }
 
         .activeBadge {
-          background: #dcfce7;
-          color: #166534;
+          display:
+            inline-flex;
+
+          padding:
+            7px
+            13px;
+
+          border-radius:
+            999px;
+
+          background:
+            #dcfce7;
+
+          color:
+            #166534;
+
+          font-size:
+            11px;
+
+          font-weight:
+            800;
         }
 
-        .inactiveBadge {
-          background: #fee2e2;
-          color: #991b1b;
+        .infoSection,
+        .permissionSection {
+          margin-top:
+            18px;
+
+          padding:
+            18px;
+
+          background:
+            white;
+
+          border:
+            1px solid
+            var(--mj-border);
+
+          border-radius:
+            20px;
+
+          box-shadow:
+            0
+            8px
+            24px
+            rgba(
+              7,
+              89,
+              133,
+              0.045
+            );
         }
 
-        .errorBox {
-          margin-bottom: 16px;
-          background: #fee2e2;
-          color: #991b1b;
-          border-radius: 12px;
-          padding: 14px;
+        .sectionHeader {
+          display:
+            flex;
+
+          justify-content:
+            space-between;
+
+          gap:
+            12px;
+
+          margin-bottom:
+            15px;
+        }
+
+        .infoSection h2,
+        .permissionSection h2 {
+          margin: 0;
+
+          color:
+            var(--mj-text);
+
+          font-size:
+            19px;
+        }
+
+        .sectionHeader p {
+          margin:
+            4px 0 0;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            11px;
+        }
+
+        .infoGrid {
+          display:
+            grid;
+
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(
+                0,
+                1fr
+              )
+            );
+
+          gap:
+            10px;
+        }
+
+        .infoCard {
+          min-width:
+            0;
+
+          padding:
+            14px;
+
+          border:
+            1px solid
+            var(--mj-border);
+
+          border-radius:
+            14px;
+
+          background:
+            linear-gradient(
+              145deg,
+              #ffffff,
+              #f3fbff
+            );
+        }
+
+        .infoIcon {
+          width:
+            38px;
+
+          height:
+            38px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          border-radius:
+            11px;
+
+          background:
+            var(--mj-light);
+
+          font-size:
+            18px;
+        }
+
+        .infoLabel {
+          margin-top:
+            11px;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            10px;
+        }
+
+        .infoValue {
+          margin-top:
+            4px;
+
+          color:
+            var(--mj-primary-deep);
+
+          font-size:
+            13px;
+
+          font-weight:
+            800;
+
+          word-break:
+            break-word;
+        }
+
+        .permissionBox {
+          display:
+            flex;
+
+          align-items:
+            flex-start;
+
+          gap:
+            12px;
+
+          margin-top:
+            14px;
+
+          padding:
+            14px;
+
+          border-radius:
+            14px;
+
+          background:
+            var(--mj-light);
+
+          border:
+            1px solid
+            var(--mj-border);
+        }
+
+        .permissionIcon {
+          flex:
+            0 0
+            34px;
+
+          width:
+            34px;
+
+          height:
+            34px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          border-radius:
+            50%;
+
+          background:
+            var(--mj-primary);
+
+          color:
+            white;
+
+          font-size:
+            16px;
+
+          font-weight:
+            800;
+        }
+
+        .permissionBox strong {
+          color:
+            var(--mj-primary-deep);
+
+          font-size:
+            13px;
+        }
+
+        .permissionBox p {
+          margin:
+            5px 0 0;
+
+          color:
+            #52606d;
+
+          font-size:
+            12px;
+
+          line-height:
+            1.5;
         }
 
         .signOutButton {
-          width: 100%;
-          border: 1px solid #fecaca;
-          background: white;
-          color: #b91c1c;
-          padding: 13px;
-          border-radius: 12px;
-          font-weight: 800;
-          cursor: pointer;
-          margin-bottom: 10px;
+          width:
+            100%;
+
+          margin-top:
+            18px;
+
+          padding:
+            14px;
+
+          border-radius:
+            13px;
+
+          border:
+            1px solid
+            #fecaca;
+
+          background:
+            #fff1f2;
+
+          color:
+            #991b1b;
+
+          font-size:
+            14px;
+
+          font-weight:
+            800;
+
+          cursor:
+            pointer;
+        }
+
+        .signOutButton:hover {
+          background:
+            #fee2e2;
         }
 
         .signOutButton:disabled {
-          opacity: 0.6;
+          opacity:
+            0.55;
+
+          cursor:
+            not-allowed;
         }
 
-        .bottomNav {
-          position: fixed;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 72px;
-          background: rgba(255,255,255,0.97);
-          border-top: 1px solid #e5e7eb;
-          display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          z-index: 999;
+        .errorBox {
+          margin-bottom:
+            14px;
+
+          padding:
+            12px;
+
+          border-radius:
+            10px;
+
+          background:
+            #fee2e2;
+
+          color:
+            #991b1b;
+
+          font-size:
+            13px;
         }
 
-        .navItem {
-          text-decoration: none;
-          color: #7b8491;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          font-size: 10px;
-          font-weight: 600;
+        @media (
+          max-width:
+            600px
+        ) {
+          .infoGrid {
+            grid-template-columns:
+              1fr;
+          }
         }
 
-        .navItemActive {
-          color: #0f766e;
-        }
+        @media (
+          max-width:
+            420px
+        ) {
+          .page {
+            padding:
+              14px
+              12px
+              40px;
+          }
 
-        .navIcon {
-          font-size: 21px;
+          .profileHero {
+            padding:
+              26px
+              16px;
+          }
+
+          .avatar {
+            width:
+              82px;
+
+            height:
+              82px;
+
+            font-size:
+              27px;
+          }
+
+          .profileName {
+            font-size:
+              21px;
+          }
         }
       `}</style>
     </main>
   )
 }
 
-function InfoRow({
+function InfoCard({
+  icon,
   label,
   value,
 }: {
+  icon: string
   label: string
   value: string
 }) {
   return (
-    <div className="infoRow">
+    <div className="infoCard">
+      <div className="infoIcon">
+        {icon}
+      </div>
+
       <div className="infoLabel">
         {label}
       </div>
@@ -483,36 +1076,5 @@ function InfoRow({
         {value}
       </div>
     </div>
-  )
-}
-
-function BottomNavItem({
-  href,
-  icon,
-  label,
-  active = false,
-}: {
-  href: string
-  icon: string
-  label: string
-  active?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        active
-          ? 'navItem navItemActive'
-          : 'navItem'
-      }
-    >
-      <span className="navIcon">
-        {icon}
-      </span>
-
-      <span>
-        {label}
-      </span>
-    </Link>
   )
 }

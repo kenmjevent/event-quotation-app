@@ -1,6 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 
@@ -12,7 +17,7 @@ type Material = {
   cost_price: number
   wastage_percent: number
   is_active: boolean
-  created_at?: string
+  created_at: string
 }
 
 type MaterialForm = {
@@ -28,22 +33,55 @@ const emptyForm: MaterialForm = {
   name: '',
   category: '',
   unit: 'pcs',
-  cost_price: '',
+  cost_price: '0',
   wastage_percent: '0',
   is_active: true,
 }
 
 export default function MaterialsPage() {
-  const [materials, setMaterials] = useState<Material[]>([])
-  const [loading, setLoading] = useState(true)
+  const [
+    materials,
+    setMaterials,
+  ] = useState<Material[]>([])
 
-  const [form, setForm] = useState<MaterialForm>(emptyForm)
+  const [
+    form,
+    setForm,
+  ] = useState<MaterialForm>(
+    emptyForm
+  )
 
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [
+    editingId,
+    setEditingId,
+  ] = useState<
+    string | null
+  >(null)
 
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
-  const [errorMessage, setErrorMessage] = useState('')
+  const [
+    search,
+    setSearch,
+  ] = useState('')
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true)
+
+  const [
+    saving,
+    setSaving,
+  ] = useState(false)
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('')
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState('')
 
   useEffect(() => {
     loadMaterials()
@@ -53,49 +91,138 @@ export default function MaterialsPage() {
     setLoading(true)
     setErrorMessage('')
 
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from('materials')
-      .select('*')
-      .order('name', { ascending: true })
+      .select(`
+        id,
+        name,
+        category,
+        unit,
+        cost_price,
+        wastage_percent,
+        is_active,
+        created_at
+      `)
+      .order('name', {
+        ascending: true,
+      })
 
     if (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(
+        error.message
+      )
+
       setLoading(false)
       return
     }
 
-    setMaterials(data || [])
+    setMaterials(
+      data || []
+    )
+
     setLoading(false)
   }
 
-  function updateForm(
-    field: keyof MaterialForm,
-    value: string | boolean
+  const filteredMaterials =
+    useMemo(() => {
+      const keyword =
+        search
+          .trim()
+          .toLowerCase()
+
+      if (!keyword) {
+        return materials
+      }
+
+      return materials.filter(
+        (material) =>
+          String(
+            material.name ||
+              ''
+          )
+            .toLowerCase()
+            .includes(
+              keyword
+            ) ||
+          String(
+            material.category ||
+              ''
+          )
+            .toLowerCase()
+            .includes(
+              keyword
+            ) ||
+          String(
+            material.unit ||
+              ''
+          )
+            .toLowerCase()
+            .includes(
+              keyword
+            )
+      )
+    }, [
+      materials,
+      search,
+    ])
+
+  function updateForm<
+    K extends keyof MaterialForm
+  >(
+    field: K,
+    value: MaterialForm[K]
   ) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }))
+    setForm(
+      (current) => ({
+        ...current,
+        [field]:
+          value,
+      })
+    )
   }
 
-  function resetForm() {
-    setForm(emptyForm)
-    setEditingId(null)
-    setMessage('')
-    setErrorMessage('')
-  }
-
-  function startEdit(material: Material) {
-    setEditingId(material.id)
+  function startEdit(
+    material: Material
+  ) {
+    setEditingId(
+      material.id
+    )
 
     setForm({
-      name: material.name || '',
-      category: material.category || '',
-      unit: material.unit || 'pcs',
-      cost_price: String(material.cost_price || ''),
-      wastage_percent: String(material.wastage_percent || 0),
-      is_active: material.is_active,
+      name:
+        material.name ||
+        '',
+
+      category:
+        material.category ||
+        '',
+
+      unit:
+        material.unit ||
+        'pcs',
+
+      cost_price:
+        String(
+          material.cost_price ||
+            0
+        ),
+
+      wastage_percent:
+        String(
+          material.wastage_percent ||
+            0
+        ),
+
+      is_active:
+        material.is_active !==
+        false,
     })
+
+    setSuccessMessage('')
+    setErrorMessage('')
 
     window.scrollTo({
       top: 0,
@@ -103,118 +230,266 @@ export default function MaterialsPage() {
     })
   }
 
-  async function saveMaterial() {
-    setMessage('')
+  function cancelEdit() {
+    setEditingId(null)
+    setForm(emptyForm)
     setErrorMessage('')
+    setSuccessMessage('')
+  }
 
-    if (!form.name.trim()) {
-      setErrorMessage('Please enter Material Name.')
+  async function saveMaterial() {
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    if (
+      !form.name.trim()
+    ) {
+      setErrorMessage(
+        'Please enter Material Name.'
+      )
+
       return
     }
 
-    if (!form.unit.trim()) {
-      setErrorMessage('Please select Unit.')
+    if (
+      !form.unit.trim()
+    ) {
+      setErrorMessage(
+        'Please select Unit.'
+      )
+
       return
     }
 
-    if (Number(form.cost_price) < 0) {
-      setErrorMessage('Cost Price cannot be negative.')
+    const costPrice =
+      Number(
+        form.cost_price
+      )
+
+    const wastage =
+      Number(
+        form.wastage_percent
+      )
+
+    if (
+      Number.isNaN(
+        costPrice
+      ) ||
+      costPrice < 0
+    ) {
+      setErrorMessage(
+        'Cost Price is invalid.'
+      )
+
+      return
+    }
+
+    if (
+      Number.isNaN(
+        wastage
+      ) ||
+      wastage < 0
+    ) {
+      setErrorMessage(
+        'Wastage % is invalid.'
+      )
+
       return
     }
 
     setSaving(true)
 
-    const payload = {
-      name: form.name.trim(),
-      category: form.category.trim() || null,
-      unit: form.unit,
-      cost_price: Number(form.cost_price) || 0,
-      wastage_percent: Number(form.wastage_percent) || 0,
-      is_active: form.is_active,
-    }
+    try {
+      const payload = {
+        name:
+          form.name.trim(),
 
-    if (editingId) {
-      const { error } = await supabase
-        .from('materials')
-        .update(payload)
-        .eq('id', editingId)
+        category:
+          form.category.trim() ||
+          null,
 
-      if (error) {
-        setErrorMessage(`Update failed: ${error.message}`)
-        setSaving(false)
-        return
+        unit:
+          form.unit.trim(),
+
+        cost_price:
+          costPrice,
+
+        wastage_percent:
+          wastage,
+
+        is_active:
+          form.is_active,
       }
 
-      setMessage('Material updated successfully.')
-    } else {
-      const { error } = await supabase
-        .from('materials')
-        .insert(payload)
+      if (
+        editingId
+      ) {
+        const {
+          error,
+        } = await supabase
+          .from('materials')
+          .update(
+            payload
+          )
+          .eq(
+            'id',
+            editingId
+          )
 
-      if (error) {
-        setErrorMessage(`Save failed: ${error.message}`)
-        setSaving(false)
-        return
+        if (error) {
+          throw error
+        }
+
+        setSuccessMessage(
+          'Material updated successfully.'
+        )
+      } else {
+        const {
+          error,
+        } = await supabase
+          .from('materials')
+          .insert(
+            payload
+          )
+
+        if (error) {
+          throw error
+        }
+
+        setSuccessMessage(
+          'Material added successfully.'
+        )
       }
 
-      setMessage('Material added successfully.')
+      setEditingId(null)
+      setForm(emptyForm)
+
+      await loadMaterials()
+    } catch (
+      error: any
+    ) {
+      console.error(
+        'Save material error:',
+        error
+      )
+
+      setErrorMessage(
+        error?.message ||
+          'Unable to save material.'
+      )
+    } finally {
+      setSaving(false)
     }
-
-    setForm(emptyForm)
-    setEditingId(null)
-
-    await loadMaterials()
-
-    setSaving(false)
   }
 
-  async function deleteMaterial(material: Material) {
-    const confirmed = window.confirm(
-      `Delete material "${material.name}"?\n\nThis cannot be undone.`
-    )
+  async function toggleActive(
+    material: Material
+  ) {
+    setErrorMessage('')
+    setSuccessMessage('')
 
-    if (!confirmed) return
+    const newStatus =
+      !material.is_active
 
-    const { error } = await supabase
-      .from('materials')
-      .delete()
-      .eq('id', material.id)
-
-    if (error) {
-      setErrorMessage(`Delete failed: ${error.message}`)
-      return
-    }
-
-    setMessage(`Deleted ${material.name}.`)
-
-    await loadMaterials()
-  }
-
-  async function toggleActive(material: Material) {
-    const { error } = await supabase
+    const {
+      error,
+    } = await supabase
       .from('materials')
       .update({
-        is_active: !material.is_active,
+        is_active:
+          newStatus,
       })
-      .eq('id', material.id)
+      .eq(
+        'id',
+        material.id
+      )
 
     if (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(
+        error.message
+      )
       return
     }
+
+    setSuccessMessage(
+      `${material.name} ${
+        newStatus
+          ? 'activated'
+          : 'deactivated'
+      }.`
+    )
 
     await loadMaterials()
   }
 
-  function formatRM(value: number) {
-    return `RM${Number(value || 0).toLocaleString('en-MY', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+  async function deleteMaterial(
+    material: Material
+  ) {
+    const confirmed =
+      window.confirm(
+        `Delete material?\n\n${material.name}\n\nThis cannot be undone.`
+      )
+
+    if (
+      !confirmed
+    ) {
+      return
+    }
+
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    const {
+      error,
+    } = await supabase
+      .from('materials')
+      .delete()
+      .eq(
+        'id',
+        material.id
+      )
+
+    if (error) {
+      setErrorMessage(
+        error.message
+      )
+
+      return
+    }
+
+    if (
+      editingId ===
+      material.id
+    ) {
+      cancelEdit()
+    }
+
+    setSuccessMessage(
+      `${material.name} deleted successfully.`
+    )
+
+    await loadMaterials()
+  }
+
+  function formatRM(
+    value: number
+  ) {
+    return `RM${Number(
+      value || 0
+    ).toLocaleString(
+      'en-MY',
+      {
+        minimumFractionDigits:
+          2,
+        maximumFractionDigits:
+          2,
+      }
+    )}`
   }
 
   return (
     <main className="page">
+
       <header className="topBar">
         <Link
           href="/"
@@ -229,13 +504,27 @@ export default function MaterialsPage() {
           </div>
 
           <div className="topSubtitle">
-            Manage material costing database
+            Manage material pricing
+            and wastage
           </div>
         </div>
       </header>
 
+      {errorMessage && (
+        <div className="errorBox">
+          {errorMessage}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="successBox">
+          {successMessage}
+        </div>
+      )}
+
       <section className="formCard">
-        <div className="cardHeader">
+
+        <div className="formHeader">
           <div>
             <h2>
               {editingId
@@ -244,14 +533,18 @@ export default function MaterialsPage() {
             </h2>
 
             <p>
-              Maintain rates used by the Cost Calculator
+              {editingId
+                ? 'Update material information'
+                : 'Create a new material item'}
             </p>
           </div>
 
           {editingId && (
             <button
               type="button"
-              onClick={resetForm}
+              onClick={
+                cancelEdit
+              }
               className="cancelButton"
             >
               Cancel Edit
@@ -260,56 +553,108 @@ export default function MaterialsPage() {
         </div>
 
         <div className="formGrid">
+
           <Field label="Material Name">
             <input
-              value={form.name}
-              onChange={(e) =>
-                updateForm('name', e.target.value)
+              value={
+                form.name
               }
-              placeholder="e.g. 15mm Plywood 4x8"
+              onChange={(
+                e
+              ) =>
+                updateForm(
+                  'name',
+                  e.target
+                    .value
+                )
+              }
+              placeholder="Example: 15mm Plywood"
               className="input"
             />
           </Field>
 
           <Field label="Category">
             <input
-              value={form.category}
-              onChange={(e) =>
-                updateForm('category', e.target.value)
+              value={
+                form.category
               }
-              placeholder="e.g. Plywood"
+              onChange={(
+                e
+              ) =>
+                updateForm(
+                  'category',
+                  e.target
+                    .value
+                )
+              }
+              placeholder="Example: Board / Lighting"
               className="input"
             />
           </Field>
 
           <Field label="Unit">
             <select
-              value={form.unit}
-              onChange={(e) =>
-                updateForm('unit', e.target.value)
+              value={
+                form.unit
+              }
+              onChange={(
+                e
+              ) =>
+                updateForm(
+                  'unit',
+                  e.target
+                    .value
+                )
               }
               className="input"
             >
-              <option value="pcs">pcs</option>
-              <option value="sheet">sheet</option>
-              <option value="sqft">sqft</option>
-              <option value="ft">ft</option>
-              <option value="m">m</option>
-              <option value="roll">roll</option>
-              <option value="set">set</option>
-              <option value="lot">lot</option>
+              <option value="sheet">
+                sheet
+              </option>
+
+              <option value="sqft">
+                sqft
+              </option>
+
+              <option value="ft">
+                ft
+              </option>
+
+              <option value="pcs">
+                pcs
+              </option>
+
+              <option value="unit">
+                unit
+              </option>
+
+              <option value="set">
+                set
+              </option>
+
+              <option value="roll">
+                roll
+              </option>
             </select>
           </Field>
 
           <Field label="Cost Price (RM)">
             <input
               type="number"
+              min="0"
               step="0.01"
-              value={form.cost_price}
-              onChange={(e) =>
-                updateForm('cost_price', e.target.value)
+              value={
+                form.cost_price
               }
-              placeholder="0.00"
+              onChange={(
+                e
+              ) =>
+                updateForm(
+                  'cost_price',
+                  e.target
+                    .value
+                )
+              }
               className="input"
             />
           </Field>
@@ -317,12 +662,18 @@ export default function MaterialsPage() {
           <Field label="Wastage (%)">
             <input
               type="number"
-              step="0.01"
-              value={form.wastage_percent}
-              onChange={(e) =>
+              min="0"
+              step="0.1"
+              value={
+                form.wastage_percent
+              }
+              onChange={(
+                e
+              ) =>
                 updateForm(
                   'wastage_percent',
-                  e.target.value
+                  e.target
+                    .value
                 )
               }
               className="input"
@@ -330,14 +681,19 @@ export default function MaterialsPage() {
           </Field>
 
           <Field label="Status">
-            <label className="toggleRow">
+            <label className="statusToggle">
               <input
                 type="checkbox"
-                checked={form.is_active}
-                onChange={(e) =>
+                checked={
+                  form.is_active
+                }
+                onChange={(
+                  e
+                ) =>
                   updateForm(
                     'is_active',
-                    e.target.checked
+                    e.target
+                      .checked
                   )
                 }
               />
@@ -349,51 +705,73 @@ export default function MaterialsPage() {
               </span>
             </label>
           </Field>
+
         </div>
-
-        {errorMessage && (
-          <div className="errorBox">
-            {errorMessage}
-          </div>
-        )}
-
-        {message && (
-          <div className="successBox">
-            {message}
-          </div>
-        )}
 
         <button
           type="button"
-          onClick={saveMaterial}
-          disabled={saving}
+          onClick={
+            saveMaterial
+          }
+          disabled={
+            saving
+          }
           className="saveButton"
         >
           {saving
             ? 'Saving...'
             : editingId
             ? 'Update Material'
-            : 'Add Material'}
+            : '+ Add Material'}
         </button>
+
       </section>
 
       <section className="listSection">
+
         <div className="listHeader">
           <div>
-            <h2>Materials</h2>
+            <h2>
+              Material List
+            </h2>
 
             <p>
-              {materials.length} material(s)
+              {
+                materials.length
+              } material(s)
             </p>
           </div>
 
           <button
             type="button"
-            onClick={loadMaterials}
+            onClick={
+              loadMaterials
+            }
             className="refreshButton"
           >
             Refresh
           </button>
+        </div>
+
+        <div className="searchBox">
+          <span>
+            🔎
+          </span>
+
+          <input
+            value={
+              search
+            }
+            onChange={(
+              e
+            ) =>
+              setSearch(
+                e.target
+                  .value
+              )
+            }
+            placeholder="Search material, category or unit..."
+          />
         </div>
 
         {loading && (
@@ -402,595 +780,1073 @@ export default function MaterialsPage() {
           </div>
         )}
 
-        {!loading && materials.length === 0 && (
-          <div className="emptyCard">
-            No materials found.
-          </div>
-        )}
+        {!loading &&
+          filteredMaterials.length ===
+            0 && (
+            <div className="emptyCard">
+              No materials found.
+            </div>
+          )}
 
-        {!loading && materials.length > 0 && (
-          <>
-            <div className="desktopTableWrap">
-              <table className="materialTable">
-                <thead>
-                  <tr>
-                    <th>Material</th>
-                    <th>Category</th>
-                    <th>Unit</th>
-                    <th>Cost</th>
-                    <th>Wastage</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+        {!loading &&
+          filteredMaterials.length >
+            0 && (
+            <>
+              <div className="desktopTable">
 
-                <tbody>
-                  {materials.map((material) => (
-                    <tr key={material.id}>
-                      <td>
-                        <strong>
-                          {material.name}
-                        </strong>
-                      </td>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>
+                        Material
+                      </th>
 
-                      <td>
-                        {material.category || '-'}
-                      </td>
+                      <th>
+                        Category
+                      </th>
 
-                      <td>
-                        {material.unit}
-                      </td>
+                      <th>
+                        Unit
+                      </th>
 
-                      <td>
-                        {formatRM(material.cost_price)}
-                      </td>
+                      <th>
+                        Cost Price
+                      </th>
 
-                      <td>
-                        {Number(
-                          material.wastage_percent || 0
-                        ).toFixed(2)}
-                        %
-                      </td>
+                      <th>
+                        Wastage
+                      </th>
 
-                      <td>
-                        <StatusBadge
-                          active={material.is_active}
-                        />
-                      </td>
+                      <th>
+                        Status
+                      </th>
 
-                      <td>
-                        <div className="actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              startEdit(material)
-                            }
-                            className="actionButton"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleActive(material)
-                            }
-                            className="actionButton"
-                          >
-                            {material.is_active
-                              ? 'Disable'
-                              : 'Enable'}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteMaterial(material)
-                            }
-                            className="actionButton deleteButton"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+                      <th>
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
 
-            <div className="mobileCards">
-              {materials.map((material) => (
-                <div
-                  key={material.id}
-                  className="materialCard"
-                >
-                  <div className="materialTop">
-                    <div>
-                      <div className="materialName">
-                        {material.name}
+                  <tbody>
+                    {filteredMaterials.map(
+                      (
+                        material
+                      ) => (
+                        <tr
+                          key={
+                            material.id
+                          }
+                        >
+                          <td>
+                            <strong className="materialName">
+                              {
+                                material.name
+                              }
+                            </strong>
+                          </td>
+
+                          <td>
+                            {material.category ||
+                              '-'}
+                          </td>
+
+                          <td>
+                            <span className="unitBadge">
+                              {
+                                material.unit
+                              }
+                            </span>
+                          </td>
+
+                          <td>
+                            <strong className="priceText">
+                              {formatRM(
+                                material.cost_price
+                              )}
+                            </strong>
+                          </td>
+
+                          <td>
+                            {Number(
+                              material.wastage_percent ||
+                                0
+                            ).toFixed(
+                              1
+                            )}
+                            %
+                          </td>
+
+                          <td>
+                            <StatusBadge
+                              active={
+                                material.is_active
+                              }
+                            />
+                          </td>
+
+                          <td>
+                            <div className="actions">
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  startEdit(
+                                    material
+                                  )
+                                }
+                                className="editButton"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleActive(
+                                    material
+                                  )
+                                }
+                                className="statusButton"
+                              >
+                                {material.is_active
+                                  ? 'Disable'
+                                  : 'Enable'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  deleteMaterial(
+                                    material
+                                  )
+                                }
+                                className="deleteButton"
+                              >
+                                Delete
+                              </button>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+
+              </div>
+
+              <div className="mobileCards">
+
+                {filteredMaterials.map(
+                  (
+                    material
+                  ) => (
+                    <div
+                      key={
+                        material.id
+                      }
+                      className="materialCard"
+                    >
+
+                      <div className="cardTop">
+                        <div>
+                          <div className="cardMaterialName">
+                            {
+                              material.name
+                            }
+                          </div>
+
+                          <div className="cardCategory">
+                            {material.category ||
+                              'No category'}
+                          </div>
+                        </div>
+
+                        <StatusBadge
+                          active={
+                            material.is_active
+                          }
+                        />
                       </div>
 
-                      <div className="materialCategory">
-                        {material.category || 'No category'}
+                      <div className="cardInfoGrid">
+
+                        <InfoItem
+                          label="Unit"
+                          value={
+                            material.unit
+                          }
+                        />
+
+                        <InfoItem
+                          label="Cost"
+                          value={formatRM(
+                            material.cost_price
+                          )}
+                        />
+
+                        <InfoItem
+                          label="Wastage"
+                          value={`${Number(
+                            material.wastage_percent ||
+                              0
+                          ).toFixed(
+                            1
+                          )}%`}
+                        />
+
                       </div>
+
+                      <div className="mobileActions">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startEdit(
+                              material
+                            )
+                          }
+                          className="mobileEditButton"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleActive(
+                              material
+                            )
+                          }
+                          className="mobileStatusButton"
+                        >
+                          {material.is_active
+                            ? 'Disable'
+                            : 'Enable'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deleteMaterial(
+                              material
+                            )
+                          }
+                          className="mobileDeleteButton"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+
                     </div>
+                  )
+                )}
 
-                    <StatusBadge
-                      active={material.is_active}
-                    />
-                  </div>
+              </div>
+            </>
+          )}
 
-                  <div className="infoGrid">
-                    <InfoItem
-                      label="Unit"
-                      value={material.unit}
-                    />
-
-                    <InfoItem
-                      label="Cost"
-                      value={formatRM(
-                        material.cost_price
-                      )}
-                    />
-
-                    <InfoItem
-                      label="Wastage"
-                      value={`${Number(
-                        material.wastage_percent || 0
-                      ).toFixed(2)}%`}
-                    />
-                  </div>
-
-                  <div className="mobileActions">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        startEdit(material)
-                      }
-                      className="actionButton"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleActive(material)
-                      }
-                      className="actionButton"
-                    >
-                      {material.is_active
-                        ? 'Disable'
-                        : 'Enable'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        deleteMaterial(material)
-                      }
-                      className="actionButton deleteButton"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </section>
-
-      <nav className="bottomNav">
-        <BottomNavItem
-          href="/"
-          icon="🏠"
-          label="Home"
-        />
-
-        <BottomNavItem
-          href="/calculator"
-          icon="🧮"
-          label="Costing"
-        />
-
-        <BottomNavItem
-          href="/materials"
-          icon="📦"
-          label="Material"
-          active
-        />
-
-        <BottomNavItem
-          href="/approvals"
-          icon="✅"
-          label="Approval"
-        />
-
-        <BottomNavItem
-          href="/profile"
-          icon="👤"
-          label="Profile"
-        />
-      </nav>
 
       <style jsx global>{`
         * {
-          box-sizing: border-box;
+          box-sizing:
+            border-box;
         }
 
         html,
         body {
           margin: 0;
           padding: 0;
-          width: 100%;
-          max-width: 100%;
-          overflow-x: hidden;
-          font-family: Arial, sans-serif;
-          background: #f4f6fa;
-        }
-
-        body {
-          padding-bottom: 88px;
+          background:
+            var(--mj-background);
+          color:
+            var(--mj-text);
+          font-family:
+            Arial,
+            Helvetica,
+            sans-serif;
         }
 
         .page {
-          min-height: 100vh;
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 18px 14px 40px;
+          min-height:
+            100vh;
+          max-width:
+            1100px;
+          margin:
+            0 auto;
+          padding:
+            18px
+            14px
+            50px;
         }
 
         .topBar {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 18px;
+          display:
+            flex;
+          align-items:
+            center;
+          gap:
+            12px;
+          margin-bottom:
+            18px;
         }
 
         .backButton {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          background: white;
-          border: 1px solid #e5e7eb;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          text-decoration: none;
-          color: #0f766e;
-          font-size: 24px;
-          font-weight: 700;
+          width:
+            42px;
+          height:
+            42px;
+          display:
+            flex;
+          align-items:
+            center;
+          justify-content:
+            center;
+          border-radius:
+            12px;
+          background:
+            white;
+          border:
+            1px solid
+            var(--mj-border);
+          color:
+            var(--mj-primary);
+          text-decoration:
+            none;
+          font-size:
+            24px;
+          font-weight:
+            800;
+          box-shadow:
+            0
+            5px
+            15px
+            rgba(
+              7,
+              89,
+              133,
+              0.06
+            );
         }
 
         .topTitle {
-          font-size: 24px;
-          font-weight: 800;
-          color: #111827;
+          font-size:
+            24px;
+          font-weight:
+            800;
+          color:
+            var(--mj-text);
         }
 
         .topSubtitle {
-          margin-top: 3px;
-          font-size: 13px;
-          color: #6b7280;
+          margin-top:
+            3px;
+          color:
+            var(--mj-muted);
+          font-size:
+            12px;
         }
 
         .formCard,
-        .materialCard,
-        .emptyCard {
-          background: white;
-          border: 1px solid #e8ecf1;
-          border-radius: 20px;
+        .listSection {
+          background:
+            white;
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            20px;
+          padding:
+            18px;
+          margin-bottom:
+            18px;
           box-shadow:
-            0 5px 18px rgba(15, 23, 42, 0.05);
+            0
+            8px
+            24px
+            rgba(
+              7,
+              89,
+              133,
+              0.05
+            );
         }
 
-        .formCard {
-          padding: 18px;
-        }
-
-        .cardHeader,
+        .formHeader,
         .listHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
+          display:
+            flex;
+          justify-content:
+            space-between;
+          align-items:
+            flex-start;
+          gap:
+            12px;
+          margin-bottom:
+            16px;
         }
 
-        .cardHeader h2,
+        .formHeader h2,
         .listHeader h2 {
-          margin: 0;
-          font-size: 21px;
-          color: #111827;
+          margin:
+            0;
+          font-size:
+            20px;
+          color:
+            var(--mj-text);
         }
 
-        .cardHeader p,
+        .formHeader p,
         .listHeader p {
-          margin: 5px 0 0;
-          font-size: 13px;
-          color: #6b7280;
+          margin:
+            4px 0 0;
+          color:
+            var(--mj-muted);
+          font-size:
+            12px;
         }
 
         .formGrid {
-          display: grid;
+          display:
+            grid;
           grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-          gap: 12px;
+            repeat(
+              2,
+              minmax(
+                0,
+                1fr
+              )
+            );
+          gap:
+            12px;
         }
 
         .field {
-          min-width: 0;
+          min-width:
+            0;
+          margin-bottom:
+            10px;
         }
 
         .label {
-          display: block;
-          margin-bottom: 6px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #374151;
+          display:
+            block;
+          margin-bottom:
+            6px;
+          color:
+            #334155;
+          font-size:
+            12px;
+          font-weight:
+            700;
         }
 
         .input {
-          width: 100%;
-          min-width: 0;
-          padding: 12px 13px;
-          border: 1px solid #d1d5db;
-          border-radius: 10px;
-          font-size: 15px;
-          background: white;
+          width:
+            100%;
+          padding:
+            12px
+            13px;
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            10px;
+          background:
+            white;
+          color:
+            var(--mj-text);
+          font-size:
+            14px;
+          outline:
+            none;
         }
 
-        .toggleRow {
-          min-height: 44px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 0 4px;
-          font-weight: 600;
+        .input:focus {
+          border-color:
+            var(--mj-primary);
+          box-shadow:
+            0
+            0
+            0
+            3px
+            rgba(
+              7,
+              152,
+              212,
+              0.1
+            );
         }
 
-        .toggleRow input {
-          width: 18px;
-          height: 18px;
+        .statusToggle {
+          min-height:
+            45px;
+          display:
+            flex;
+          align-items:
+            center;
+          gap:
+            10px;
+          padding:
+            10px
+            12px;
+          background:
+            var(--mj-light);
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            10px;
+          color:
+            var(--mj-primary-deep);
+          font-size:
+            13px;
+          font-weight:
+            700;
+        }
+
+        .statusToggle input {
+          width:
+            18px;
+          height:
+            18px;
+          accent-color:
+            var(--mj-primary);
         }
 
         .saveButton {
-          margin-top: 16px;
-          width: 100%;
-          border: none;
-          background: #0f766e;
-          color: white;
-          font-weight: 800;
-          padding: 13px 16px;
-          border-radius: 12px;
-          cursor: pointer;
+          width:
+            100%;
+          border:
+            none;
+          border-radius:
+            12px;
+          padding:
+            14px;
+          margin-top:
+            6px;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
+          color:
+            white;
+          font-size:
+            14px;
+          font-weight:
+            800;
+          cursor:
+            pointer;
+          box-shadow:
+            0
+            9px
+            22px
+            rgba(
+              7,
+              152,
+              212,
+              0.2
+            );
         }
 
         .saveButton:disabled {
-          opacity: 0.6;
+          opacity:
+            0.55;
+          cursor:
+            not-allowed;
         }
 
-        .cancelButton,
+        .cancelButton {
+          border:
+            1px solid
+            var(--mj-border);
+          background:
+            white;
+          color:
+            var(--mj-primary);
+          border-radius:
+            9px;
+          padding:
+            8px
+            11px;
+          font-size:
+            12px;
+          font-weight:
+            800;
+          cursor:
+            pointer;
+        }
+
         .refreshButton {
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-weight: 700;
-          cursor: pointer;
+          border:
+            1px solid
+            var(--mj-primary);
+          background:
+            var(--mj-light);
+          color:
+            var(--mj-primary-deep);
+          border-radius:
+            9px;
+          padding:
+            8px
+            11px;
+          font-size:
+            12px;
+          font-weight:
+            800;
+          cursor:
+            pointer;
+        }
+
+        .searchBox {
+          display:
+            flex;
+          align-items:
+            center;
+          gap:
+            8px;
+          margin-bottom:
+            16px;
+          padding:
+            0
+            12px;
+          background:
+            #f8fcff;
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            11px;
+        }
+
+        .searchBox input {
+          width:
+            100%;
+          border:
+            none;
+          outline:
+            none;
+          background:
+            transparent;
+          padding:
+            12px
+            0;
+          color:
+            var(--mj-text);
+          font-size:
+            13px;
+        }
+
+        .desktopTable {
+          overflow-x:
+            auto;
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            15px;
+        }
+
+        table {
+          width:
+            100%;
+          min-width:
+            900px;
+          border-collapse:
+            collapse;
+        }
+
+        th {
+          text-align:
+            left;
+          background:
+            var(--mj-light);
+          color:
+            var(--mj-primary-deep);
+          padding:
+            12px;
+          font-size:
+            11px;
+          font-weight:
+            800;
+        }
+
+        td {
+          padding:
+            12px;
+          border-top:
+            1px solid
+            #eaf2f7;
+          color:
+            #334155;
+          font-size:
+            12px;
+          vertical-align:
+            middle;
+        }
+
+        tbody tr:hover {
+          background:
+            #fbfdff;
+        }
+
+        .materialName {
+          color:
+            var(--mj-text);
+        }
+
+        .priceText {
+          color:
+            var(--mj-primary-deep);
+        }
+
+        .unitBadge {
+          display:
+            inline-flex;
+          padding:
+            4px
+            8px;
+          border-radius:
+            999px;
+          background:
+            var(--mj-light);
+          color:
+            var(--mj-primary-deep);
+          font-size:
+            10px;
+          font-weight:
+            800;
+        }
+
+        .statusBadge {
+          display:
+            inline-flex;
+          padding:
+            5px
+            9px;
+          border-radius:
+            999px;
+          font-size:
+            10px;
+          font-weight:
+            800;
+        }
+
+        .statusActive {
+          background:
+            #dcfce7;
+          color:
+            #166534;
+        }
+
+        .statusInactive {
+          background:
+            #f3f4f6;
+          color:
+            #6b7280;
+        }
+
+        .actions {
+          display:
+            flex;
+          flex-wrap:
+            wrap;
+          gap:
+            6px;
+        }
+
+        .editButton,
+        .statusButton,
+        .deleteButton {
+          border-radius:
+            8px;
+          padding:
+            7px
+            9px;
+          font-size:
+            11px;
+          font-weight:
+            800;
+          cursor:
+            pointer;
+        }
+
+        .editButton {
+          border:
+            1px solid
+            var(--mj-primary);
+          background:
+            var(--mj-light);
+          color:
+            var(--mj-primary-deep);
+        }
+
+        .statusButton {
+          border:
+            1px solid
+            #cbd5e1;
+          background:
+            white;
+          color:
+            #475569;
+        }
+
+        .deleteButton {
+          border:
+            1px solid
+            #fecaca;
+          background:
+            #fee2e2;
+          color:
+            #991b1b;
+        }
+
+        .mobileCards {
+          display:
+            none;
+        }
+
+        .materialCard {
+          background:
+            linear-gradient(
+              145deg,
+              #ffffff,
+              #f5fbff
+            );
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            16px;
+          padding:
+            14px;
+          box-shadow:
+            0
+            6px
+            18px
+            rgba(
+              7,
+              89,
+              133,
+              0.04
+            );
+        }
+
+        .cardTop {
+          display:
+            flex;
+          justify-content:
+            space-between;
+          gap:
+            12px;
+        }
+
+        .cardMaterialName {
+          color:
+            var(--mj-text);
+          font-size:
+            16px;
+          font-weight:
+            800;
+        }
+
+        .cardCategory {
+          margin-top:
+            4px;
+          color:
+            var(--mj-muted);
+          font-size:
+            11px;
+        }
+
+        .cardInfoGrid {
+          display:
+            grid;
+          grid-template-columns:
+            repeat(
+              3,
+              minmax(
+                0,
+                1fr
+              )
+            );
+          gap:
+            8px;
+          margin-top:
+            14px;
+          padding:
+            10px;
+          background:
+            var(--mj-light);
+          border-radius:
+            11px;
+        }
+
+        .infoLabel {
+          color:
+            #7c8a99;
+          font-size:
+            9px;
+        }
+
+        .infoValue {
+          margin-top:
+            3px;
+          color:
+            var(--mj-primary-deep);
+          font-size:
+            11px;
+          font-weight:
+            800;
+          word-break:
+            break-word;
+        }
+
+        .mobileActions {
+          display:
+            grid;
+          grid-template-columns:
+            repeat(
+              3,
+              1fr
+            );
+          gap:
+            7px;
+          margin-top:
+            12px;
+        }
+
+        .mobileEditButton,
+        .mobileStatusButton,
+        .mobileDeleteButton {
+          min-height:
+            38px;
+          border-radius:
+            9px;
+          font-size:
+            11px;
+          font-weight:
+            800;
+          cursor:
+            pointer;
+        }
+
+        .mobileEditButton {
+          border:
+            1px solid
+            var(--mj-primary);
+          background:
+            var(--mj-light);
+          color:
+            var(--mj-primary-deep);
+        }
+
+        .mobileStatusButton {
+          border:
+            1px solid
+            #cbd5e1;
+          background:
+            white;
+          color:
+            #475569;
+        }
+
+        .mobileDeleteButton {
+          border:
+            1px solid
+            #fecaca;
+          background:
+            #fee2e2;
+          color:
+            #991b1b;
         }
 
         .errorBox,
         .successBox {
-          margin-top: 14px;
-          padding: 12px;
-          border-radius: 10px;
-          font-size: 13px;
+          margin-bottom:
+            14px;
+          padding:
+            12px;
+          border-radius:
+            10px;
+          font-size:
+            13px;
         }
 
         .errorBox {
-          background: #fee2e2;
-          color: #991b1b;
+          background:
+            #fee2e2;
+          color:
+            #991b1b;
         }
 
         .successBox {
-          background: #dcfce7;
-          color: #166534;
-          font-weight: 700;
-        }
-
-        .listSection {
-          margin-top: 24px;
-        }
-
-        .desktopTableWrap {
-          overflow-x: auto;
-          background: white;
-          border: 1px solid #e8ecf1;
-          border-radius: 18px;
-        }
-
-        .materialTable {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 850px;
-        }
-
-        .materialTable th {
-          background: #f8fafc;
-          color: #374151;
-          font-size: 13px;
-          text-align: left;
-          padding: 13px;
-        }
-
-        .materialTable td {
-          padding: 13px;
-          border-top: 1px solid #edf0f3;
-          font-size: 13px;
-          color: #111827;
-        }
-
-        .actions {
-          display: flex;
-          gap: 7px;
-          flex-wrap: wrap;
-        }
-
-        .actionButton {
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 8px;
-          padding: 7px 9px;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .deleteButton {
-          color: #b91c1c;
-          border-color: #fecaca;
-        }
-
-        .statusBadge {
-          display: inline-flex;
-          align-items: center;
-          padding: 5px 9px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 800;
-        }
-
-        .statusActive {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .statusInactive {
-          background: #f3f4f6;
-          color: #6b7280;
-        }
-
-        .mobileCards {
-          display: none;
-        }
-
-        .materialCard {
-          padding: 15px;
-        }
-
-        .materialTop {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          align-items: flex-start;
-        }
-
-        .materialName {
-          font-size: 16px;
-          font-weight: 800;
-          color: #111827;
-        }
-
-        .materialCategory {
-          margin-top: 4px;
-          font-size: 12px;
-          color: #6b7280;
-        }
-
-        .infoGrid {
-          display: grid;
-          grid-template-columns:
-            repeat(3, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 15px;
-        }
-
-        .infoLabel {
-          font-size: 11px;
-          color: #9ca3af;
-        }
-
-        .infoValue {
-          margin-top: 4px;
-          font-size: 13px;
-          font-weight: 700;
-          color: #111827;
-          word-break: break-word;
-        }
-
-        .mobileActions {
-          display: grid;
-          grid-template-columns:
-            repeat(3, minmax(0, 1fr));
-          gap: 8px;
-          margin-top: 15px;
+          background:
+            #dcfce7;
+          color:
+            #166534;
+          font-weight:
+            700;
         }
 
         .emptyCard {
-          padding: 20px;
-          color: #6b7280;
-        }
-
-        .bottomNav {
-          position: fixed;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 72px;
+          padding:
+            20px;
           background:
-            rgba(255, 255, 255, 0.97);
-          border-top: 1px solid #e5e7eb;
-          display: grid;
-          grid-template-columns:
-            repeat(5, 1fr);
-          z-index: 999;
-          box-shadow:
-            0 -4px 18px rgba(15, 23, 42, 0.06);
+            #f8fcff;
+          border:
+            1px solid
+            var(--mj-border);
+          border-radius:
+            13px;
+          color:
+            var(--mj-muted);
         }
 
-        .navItem {
-          text-decoration: none;
-          color: #7b8491;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          font-size: 10px;
-          font-weight: 600;
-        }
-
-        .navItemActive {
-          color: #0f766e;
-        }
-
-        .navIcon {
-          font-size: 21px;
-          line-height: 1;
-        }
-
-        @media (max-width: 700px) {
+        @media (
+          max-width:
+            700px
+        ) {
           .formGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              1fr;
           }
 
-          .desktopTableWrap {
-            display: none;
+          .desktopTable {
+            display:
+              none;
           }
 
           .mobileCards {
-            display: grid;
-            gap: 12px;
+            display:
+              grid;
+            gap:
+              11px;
+          }
+        }
+
+        @media (
+          max-width:
+            420px
+        ) {
+          .page {
+            padding:
+              14px
+              12px
+              40px;
           }
 
-          .cardHeader {
-            align-items: flex-start;
+          .mobileActions {
+            grid-template-columns:
+              1fr;
           }
         }
       `}</style>
+
     </main>
   )
 }
@@ -1000,15 +1856,18 @@ function Field({
   children,
 }: {
   label: string
-  children: React.ReactNode
+  children:
+    React.ReactNode
 }) {
   return (
     <div className="field">
+
       <label className="label">
         {label}
       </label>
 
       {children}
+
     </div>
   )
 }
@@ -1026,7 +1885,9 @@ function StatusBadge({
           : 'statusBadge statusInactive'
       }
     >
-      {active ? 'Active' : 'Inactive'}
+      {active
+        ? 'Active'
+        : 'Inactive'}
     </span>
   )
 }
@@ -1040,6 +1901,7 @@ function InfoItem({
 }) {
   return (
     <div>
+
       <div className="infoLabel">
         {label}
       </div>
@@ -1047,37 +1909,7 @@ function InfoItem({
       <div className="infoValue">
         {value}
       </div>
+
     </div>
-  )
-}
-
-function BottomNavItem({
-  href,
-  icon,
-  label,
-  active = false,
-}: {
-  href: string
-  icon: string
-  label: string
-  active?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={
-        active
-          ? 'navItem navItemActive'
-          : 'navItem'
-      }
-    >
-      <span className="navIcon">
-        {icon}
-      </span>
-
-      <span>
-        {label}
-      </span>
-    </Link>
   )
 }

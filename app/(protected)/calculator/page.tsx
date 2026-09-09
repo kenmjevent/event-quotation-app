@@ -530,12 +530,6 @@ export default function CalculatorPage() {
       if (
         unit === 'sheet'
       ) {
-        /*
-          Standard sheet:
-          4ft x 8ft
-          = 32 sqft
-        */
-
         const areaWithWastage =
           areaSqft *
           wastageMultiplier
@@ -562,9 +556,7 @@ export default function CalculatorPage() {
           requiredQty *
           costPrice
       }
-    }
-
-    else if (
+    } else if (
       unit === 'ft'
     ) {
       const lengthMm =
@@ -584,17 +576,7 @@ export default function CalculatorPage() {
       materialCost =
         requiredQty *
         costPrice
-    }
-
-    else {
-      /*
-        pcs / unit / set /
-        transformer / light /
-        LED unit etc.
-
-        No dimension needed.
-      */
-
+    } else {
       requiredQty =
         quantity
 
@@ -679,7 +661,6 @@ export default function CalculatorPage() {
         totalCost
 
       let grossProfit = 0
-
       let grossMargin = 0
 
       if (
@@ -813,14 +794,6 @@ export default function CalculatorPage() {
     setErrorMessage('')
 
     try {
-      /*
-        Generate number again
-        immediately before saving.
-
-        This reduces the chance
-        of duplicate numbers.
-      */
-
       const finalQuotationNo =
         await generateNextQuotationNo()
 
@@ -978,12 +951,6 @@ export default function CalculatorPage() {
         }
       }
 
-      /*
-        IMPORTANT:
-        Real logged-in user
-        is recorded here.
-      */
-
       const {
         error: logError,
       } = await supabase
@@ -1067,7 +1034,6 @@ export default function CalculatorPage() {
 
   return (
     <main className="page">
-
       <header className="topBar">
         <Link
           href="/"
@@ -1105,7 +1071,6 @@ export default function CalculatorPage() {
         </h2>
 
         <div className="formGrid">
-
           <Field label="Costing No.">
             <input
               value={
@@ -1169,7 +1134,6 @@ export default function CalculatorPage() {
               className="input"
             />
           </Field>
-
         </div>
       </section>
 
@@ -1454,7 +1418,6 @@ export default function CalculatorPage() {
                     </Field>
 
                     <div className="calculationBox">
-
                       {showWidthHeight && (
                         <CalcLine
                           label="Area"
@@ -1499,7 +1462,6 @@ export default function CalculatorPage() {
                           result.materialCost
                         )}
                       />
-
                     </div>
                   </div>
                 )
@@ -1531,7 +1493,6 @@ export default function CalculatorPage() {
                 )}
               </strong>
             </div>
-
           </section>
         )
       )}
@@ -1552,7 +1513,6 @@ export default function CalculatorPage() {
         </h2>
 
         <div className="formGrid">
-
           <MoneyField
             label="Labour"
             value={
@@ -1592,7 +1552,6 @@ export default function CalculatorPage() {
               setDismantlingCost
             }
           />
-
         </div>
       </section>
 
@@ -1624,7 +1583,6 @@ export default function CalculatorPage() {
       </section>
 
       <section className="summarySection">
-
         <h2>
           Costing Summary
         </h2>
@@ -1720,7 +1678,6 @@ export default function CalculatorPage() {
             ? 'Saving...'
             : 'Save Costing'}
         </button>
-
       </section>
 
       <style jsx global>{`
@@ -1734,9 +1691,12 @@ export default function CalculatorPage() {
           margin: 0;
           padding: 0;
           background:
-            #f4f6fa;
+            var(--mj-background);
+          color:
+            var(--mj-text);
           font-family:
             Arial,
+            Helvetica,
             sans-serif;
         }
 
@@ -1763,10 +1723,14 @@ export default function CalculatorPage() {
           justify-content:
             center;
           background:
-            #f4f6fa;
+            var(--mj-background);
+          color:
+            var(--mj-primary);
           font-family:
             Arial,
             sans-serif;
+          font-weight:
+            700;
         }
 
         .topBar {
@@ -1774,7 +1738,8 @@ export default function CalculatorPage() {
             flex;
           align-items:
             center;
-          gap: 12px;
+          gap:
+            12px;
           margin-bottom:
             18px;
         }
@@ -1795,18 +1760,28 @@ export default function CalculatorPage() {
           border-radius:
             12px;
           background:
-            white;
+            var(--mj-white);
           border:
             1px solid
-            #e5e7eb;
+            var(--mj-border);
           text-decoration:
             none;
           color:
-            #0f766e;
+            var(--mj-primary);
           font-size:
             24px;
           font-weight:
             800;
+          box-shadow:
+            0
+            5px
+            15px
+            rgba(
+              7,
+              89,
+              133,
+              0.06
+            );
         }
 
         .topTitle {
@@ -1815,27 +1790,31 @@ export default function CalculatorPage() {
           font-weight:
             800;
           color:
-            #111827;
+            var(--mj-text);
         }
 
         .topSubtitle {
           margin-top:
             3px;
           color:
-            #6b7280;
+            var(--mj-muted);
           font-size:
             12px;
         }
 
         .roleBadge {
           padding:
-            6px 10px;
+            7px
+            12px;
           border-radius:
             999px;
           background:
-            #ccfbf1;
+            var(--mj-light);
           color:
-            #0f766e;
+            var(--mj-primary-deep);
+          border:
+            1px solid
+            var(--mj-border);
           font-size:
             10px;
           font-weight:
@@ -1848,16 +1827,26 @@ export default function CalculatorPage() {
         .itemCard,
         .summarySection {
           background:
-            white;
+            var(--mj-white);
           border:
             1px solid
-            #e8ecf1;
+            var(--mj-border);
           border-radius:
             18px;
           padding:
             17px;
           margin-bottom:
             16px;
+          box-shadow:
+            0
+            8px
+            24px
+            rgba(
+              7,
+              89,
+              133,
+              0.045
+            );
         }
 
         .section h2,
@@ -1867,7 +1856,7 @@ export default function CalculatorPage() {
           font-size:
             19px;
           color:
-            #111827;
+            var(--mj-text);
         }
 
         .sectionTitleRow {
@@ -1879,7 +1868,7 @@ export default function CalculatorPage() {
         .sectionTitleRow h2 {
           margin: 0;
           color:
-            #111827;
+            var(--mj-text);
           font-size:
             20px;
         }
@@ -1888,7 +1877,7 @@ export default function CalculatorPage() {
           margin:
             4px 0 0;
           color:
-            #6b7280;
+            var(--mj-muted);
           font-size:
             12px;
         }
@@ -1925,7 +1914,7 @@ export default function CalculatorPage() {
           font-weight:
             700;
           color:
-            #374151;
+            #334155;
         }
 
         .input {
@@ -1934,23 +1923,44 @@ export default function CalculatorPage() {
           min-width:
             0;
           padding:
-            12px 13px;
+            12px
+            13px;
           border:
             1px solid
-            #d1d5db;
+            var(--mj-border);
           border-radius:
             10px;
           background:
-            white;
+            var(--mj-white);
           color:
-            #111827;
+            var(--mj-text);
           font-size:
             14px;
+          outline:
+            none;
+        }
+
+        .input:focus {
+          border-color:
+            var(--mj-primary);
+          box-shadow:
+            0
+            0
+            0
+            3px
+            rgba(
+              7,
+              152,
+              212,
+              0.1
+            );
         }
 
         .readonly {
           background:
-            #f3f4f6;
+            #f2f8fc;
+          color:
+            var(--mj-primary-deep);
           font-weight:
             700;
         }
@@ -1971,7 +1981,7 @@ export default function CalculatorPage() {
 
         .itemNumber {
           color:
-            #0f766e;
+            var(--mj-primary);
           font-size:
             18px;
           font-weight:
@@ -2007,7 +2017,7 @@ export default function CalculatorPage() {
             15px 0
             9px;
           color:
-            #374151;
+            var(--mj-primary-deep);
           font-size:
             14px;
           font-weight:
@@ -2016,10 +2026,14 @@ export default function CalculatorPage() {
 
         .materialCard {
           background:
-            #f8fafc;
+            linear-gradient(
+              145deg,
+              #f7fcff,
+              #eef9fe
+            );
           border:
             1px solid
-            #e5e7eb;
+            var(--mj-border);
           border-radius:
             14px;
           padding:
@@ -2030,10 +2044,10 @@ export default function CalculatorPage() {
 
         .calculationBox {
           background:
-            white;
+            var(--mj-white);
           border:
             1px solid
-            #edf0f3;
+            var(--mj-border);
           border-radius:
             11px;
           padding:
@@ -2052,14 +2066,14 @@ export default function CalculatorPage() {
           padding:
             4px 0;
           color:
-            #4b5563;
+            var(--mj-muted);
           font-size:
             12px;
         }
 
         .calcLine strong {
           color:
-            #111827;
+            var(--mj-primary-deep);
         }
 
         .outlineButton,
@@ -2080,23 +2094,42 @@ export default function CalculatorPage() {
 
         .outlineButton {
           background:
-            white;
+            var(--mj-white);
           border:
             1px solid
-            #d1d5db;
+            var(--mj-primary);
           color:
-            #374151;
+            var(--mj-primary);
+        }
+
+        .outlineButton:hover {
+          background:
+            var(--mj-light);
         }
 
         .addItemButton {
           background:
-            #0f766e;
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
           color:
             white;
           border:
             none;
           margin-bottom:
             16px;
+          box-shadow:
+            0
+            8px
+            20px
+            rgba(
+              7,
+              152,
+              212,
+              0.2
+            );
         }
 
         .itemTotal {
@@ -2112,14 +2145,14 @@ export default function CalculatorPage() {
             12px;
           border-top:
             1px solid
-            #e5e7eb;
+            var(--mj-border);
           color:
-            #374151;
+            #475569;
         }
 
         .itemTotal strong {
           color:
-            #0f766e;
+            var(--mj-primary);
         }
 
         .summaryLine {
@@ -2132,7 +2165,7 @@ export default function CalculatorPage() {
           padding:
             7px 0;
           color:
-            #4b5563;
+            #475569;
           font-size:
             14px;
         }
@@ -2141,7 +2174,7 @@ export default function CalculatorPage() {
           font-size:
             17px;
           color:
-            #111827;
+            var(--mj-text);
           font-weight:
             800;
         }
@@ -2154,9 +2187,16 @@ export default function CalculatorPage() {
           border-radius:
             11px;
           background:
-            #ccfbf1;
+            linear-gradient(
+              135deg,
+              #e4f6fd,
+              #f1fbff
+            );
           color:
-            #0f766e;
+            var(--mj-primary-deep);
+          border:
+            1px solid
+            var(--mj-border);
           font-size:
             18px;
           font-weight:
@@ -2167,7 +2207,7 @@ export default function CalculatorPage() {
           height:
             1px;
           background:
-            #e5e7eb;
+            var(--mj-border);
           margin:
             8px 0;
         }
@@ -2180,7 +2220,11 @@ export default function CalculatorPage() {
           border-radius:
             13px;
           background:
-            #0f766e;
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
           color:
             white;
           padding:
@@ -2193,6 +2237,16 @@ export default function CalculatorPage() {
             800;
           cursor:
             pointer;
+          box-shadow:
+            0
+            10px
+            24px
+            rgba(
+              7,
+              152,
+              212,
+              0.22
+            );
         }
 
         .saveButton:disabled {

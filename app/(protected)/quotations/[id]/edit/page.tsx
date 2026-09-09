@@ -1,9 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '../../../../../lib/supabase'
+
+import {
+  useParams,
+  useRouter,
+} from 'next/navigation'
+
+import {
+  supabase,
+} from '../../../../../lib/supabase'
+
 import {
   getCurrentProfile,
   type UserProfile,
@@ -21,6 +34,7 @@ type Material = {
 
 type MaterialRow = {
   id: string
+  dbId?: string
   materialId: string
   width: string
   height: string
@@ -28,10 +42,28 @@ type MaterialRow = {
   quantity: string
 }
 
-type QuoteItem = {
+type CostingItem = {
   id: string
   description: string
   materials: MaterialRow[]
+}
+
+type MaterialRelation = {
+  name: string | null
+  unit: string | null
+}
+
+type ExistingQuotationMaterial = {
+  id: string
+  item_description: string | null
+  material_id: string | null
+  width_mm: number | null
+  height_mm: number | null
+  length_mm: number | null
+  quantity: number | null
+  required_qty: number | null
+  material_cost: number | null
+  materials: MaterialRelation[] | null
 }
 
 type Quotation = {
@@ -41,7 +73,9 @@ type Quotation = {
   project_name: string | null
   quotation_date: string | null
   status: string | null
+
   target_margin: number | null
+
   labour_cost: number | null
   transport_cost: number | null
   installation_cost: number | null
@@ -49,63 +83,119 @@ type Quotation = {
 }
 
 export default function EditQuotationPage() {
-  const params = useParams()
-  const router = useRouter()
+  const params =
+    useParams()
 
-  const quotationId = String(params.id)
+  const router =
+    useRouter()
 
-  const [profile, setProfile] =
-    useState<UserProfile | null>(null)
+  const rawId =
+    params.id
 
-  const [quotation, setQuotation] =
-    useState<Quotation | null>(null)
+  const quotationId =
+    Array.isArray(rawId)
+      ? rawId[0]
+      : rawId
 
-  const [materials, setMaterials] =
+  const [
+    profile,
+    setProfile,
+  ] =
+    useState<UserProfile | null>(
+      null
+    )
+
+  const [
+    quotation,
+    setQuotation,
+  ] =
+    useState<Quotation | null>(
+      null
+    )
+
+  const [
+    materials,
+    setMaterials,
+  ] =
     useState<Material[]>([])
 
-  const [items, setItems] =
-    useState<QuoteItem[]>([])
+  const [
+    items,
+    setItems,
+  ] =
+    useState<CostingItem[]>([])
 
-  const [quotationNo, setQuotationNo] =
+  const [
+    customerName,
+    setCustomerName,
+  ] =
     useState('')
 
-  const [quotationDate, setQuotationDate] =
+  const [
+    projectName,
+    setProjectName,
+  ] =
     useState('')
 
-  const [customerName, setCustomerName] =
+  const [
+    quotationDate,
+    setQuotationDate,
+  ] =
     useState('')
 
-  const [projectName, setProjectName] =
-    useState('')
-
-  const [labourCost, setLabourCost] =
+  const [
+    labourCost,
+    setLabourCost,
+  ] =
     useState('0')
 
-  const [transportCost, setTransportCost] =
+  const [
+    transportCost,
+    setTransportCost,
+  ] =
     useState('0')
 
-  const [installationCost, setInstallationCost] =
+  const [
+    installationCost,
+    setInstallationCost,
+  ] =
     useState('0')
 
-  const [dismantlingCost, setDismantlingCost] =
+  const [
+    dismantlingCost,
+    setDismantlingCost,
+  ] =
     useState('0')
 
-  const [targetMargin, setTargetMargin] =
+  const [
+    targetMargin,
+    setTargetMargin,
+  ] =
     useState('40')
 
-  const [loading, setLoading] =
+  const [
+    loading,
+    setLoading,
+  ] =
     useState(true)
 
-  const [saving, setSaving] =
+  const [
+    saving,
+    setSaving,
+  ] =
     useState(false)
 
-  const [errorMessage, setErrorMessage] =
-    useState('')
-
-  const [successMessage, setSuccessMessage] =
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] =
     useState('')
 
   useEffect(() => {
+    if (!quotationId) {
+      return
+    }
+
     loadPage()
   }, [quotationId])
 
@@ -122,204 +212,323 @@ export default function EditQuotationPage() {
         return
       }
 
-      setProfile(currentProfile)
+      setProfile(
+        currentProfile
+      )
 
       const [
         quotationResult,
-        materialsResult,
-        quoteMaterialsResult,
-      ] = await Promise.all([
-        supabase
-          .from('quotations')
-          .select(`
-            id,
-            quotation_no,
-            customer_name,
-            project_name,
-            quotation_date,
-            status,
-            target_margin,
-            labour_cost,
-            transport_cost,
-            installation_cost,
-            dismantling_cost
-          `)
-          .eq('id', quotationId)
-          .single(),
+        materialListResult,
+        existingMaterialsResult,
+      ] =
+        await Promise.all([
+          supabase
+            .from('quotations')
+            .select(`
+              id,
+              quotation_no,
+              customer_name,
+              project_name,
+              quotation_date,
+              status,
+              target_margin,
+              labour_cost,
+              transport_cost,
+              installation_cost,
+              dismantling_cost
+            `)
+            .eq(
+              'id',
+              quotationId
+            )
+            .single(),
 
-        supabase
-          .from('materials')
-          .select('*')
-          .order('name', {
-            ascending: true,
-          }),
+          supabase
+            .from('materials')
+            .select(`
+              id,
+              name,
+              category,
+              unit,
+              cost_price,
+              wastage_percent,
+              is_active
+            `)
+            .order(
+              'name',
+              {
+                ascending: true,
+              }
+            ),
 
-        supabase
-          .from('quotation_materials')
-          .select(`
-            id,
-            quotation_id,
-            item_description,
-            material_id,
-            width_mm,
-            height_mm,
-            length_mm,
-            quantity
-          `)
-          .eq('quotation_id', quotationId)
-          .order('created_at', {
-            ascending: true,
-          }),
-      ])
+          supabase
+            .from(
+              'quotation_materials'
+            )
+            .select(`
+              id,
+              item_description,
+              material_id,
+              width_mm,
+              height_mm,
+              length_mm,
+              quantity,
+              required_qty,
+              material_cost,
+              materials (
+                name,
+                unit
+              )
+            `)
+            .eq(
+              'quotation_id',
+              quotationId
+            )
+            .order(
+              'id',
+              {
+                ascending: true,
+              }
+            ),
+        ])
 
-      if (quotationResult.error) {
+      if (
+        quotationResult.error
+      ) {
         throw quotationResult.error
       }
 
-      if (materialsResult.error) {
-        throw materialsResult.error
+      if (
+        materialListResult.error
+      ) {
+        throw materialListResult.error
       }
 
-      if (quoteMaterialsResult.error) {
-        throw quoteMaterialsResult.error
+      if (
+        existingMaterialsResult.error
+      ) {
+        throw existingMaterialsResult.error
       }
 
-      const q =
-        quotationResult.data as Quotation
+      const loadedQuotation =
+        quotationResult.data
 
       const status =
         String(
-          q.status || 'draft'
+          loadedQuotation.status ||
+            'draft'
         ).toLowerCase()
 
-      const allowed =
-        currentProfile.role === 'admin' ||
-        (
-          currentProfile.role === 'estimator' &&
-          (
-            status === 'draft' ||
-            status === 'rejected'
-          )
+      if (
+        currentProfile.role ===
+          'estimator' &&
+        status !== 'draft' &&
+        status !== 'rejected'
+      ) {
+        router.replace(
+          '/cost-listings'
         )
 
-      if (!allowed) {
-        router.replace('/cost-listings')
         return
       }
 
-      setQuotation(q)
-      setMaterials(materialsResult.data || [])
-
-      setQuotationNo(q.quotation_no || '')
-      setQuotationDate(
-        q.quotation_date ||
-          new Date()
-            .toISOString()
-            .split('T')[0]
+      setQuotation(
+        loadedQuotation
       )
 
       setCustomerName(
-        q.customer_name || ''
+        loadedQuotation.customer_name ||
+          ''
       )
 
       setProjectName(
-        q.project_name || ''
+        loadedQuotation.project_name ||
+          ''
+      )
+
+      setQuotationDate(
+        loadedQuotation.quotation_date ||
+          ''
       )
 
       setLabourCost(
-        String(q.labour_cost || 0)
+        String(
+          loadedQuotation.labour_cost ||
+            0
+        )
       )
 
       setTransportCost(
-        String(q.transport_cost || 0)
+        String(
+          loadedQuotation.transport_cost ||
+            0
+        )
       )
 
       setInstallationCost(
-        String(q.installation_cost || 0)
+        String(
+          loadedQuotation.installation_cost ||
+            0
+        )
       )
 
       setDismantlingCost(
-        String(q.dismantling_cost || 0)
+        String(
+          loadedQuotation.dismantling_cost ||
+            0
+        )
       )
 
       setTargetMargin(
-        String(q.target_margin || 40)
+        String(
+          loadedQuotation.target_margin ||
+            0
+        )
       )
 
-      const rows =
-        quoteMaterialsResult.data || []
+      const loadedMaterials =
+        materialListResult.data ||
+        []
 
-      const grouped = new Map<
-        string,
-        QuoteItem
-      >()
+      setMaterials(
+        loadedMaterials
+      )
 
-      rows.forEach((row: any) => {
-        const description =
-          row.item_description ||
-          'Item'
+      const existingRows =
+        (
+          existingMaterialsResult.data ||
+          []
+        ) as ExistingQuotationMaterial[]
 
-        if (!grouped.has(description)) {
-          grouped.set(description, {
-            id:
-              crypto.randomUUID(),
+      const grouped =
+        new Map<
+          string,
+          ExistingQuotationMaterial[]
+        >()
+
+      existingRows.forEach(
+        (row) => {
+          const description =
+            row.item_description
+              ?.trim() ||
+            'Costing Item'
+
+          const current =
+            grouped.get(
+              description
+            ) || []
+
+          current.push(
+            row
+          )
+
+          grouped.set(
             description,
-            materials: [],
-          })
+            current
+          )
         }
+      )
 
-        grouped
-          .get(description)!
-          .materials.push({
+      const mappedItems =
+        Array.from(
+          grouped.entries()
+        ).map(
+          ([
+            description,
+            rows,
+          ]) => ({
             id:
-              row.id ||
               crypto.randomUUID(),
-            materialId:
-              row.material_id ||
-              '',
-            width:
-              String(row.width_mm || 0),
-            height:
-              String(row.height_mm || 0),
-            length:
-              String(row.length_mm || 0),
-            quantity:
-              String(row.quantity || 1),
-          })
-      })
 
-      let loadedItems =
-        Array.from(grouped.values())
+            description,
+
+            materials:
+              rows.map(
+                (row) => ({
+                  id:
+                    crypto.randomUUID(),
+
+                  dbId:
+                    row.id,
+
+                  materialId:
+                    row.material_id ||
+                    '',
+
+                  width:
+                    String(
+                      row.width_mm ||
+                        0
+                    ),
+
+                  height:
+                    String(
+                      row.height_mm ||
+                        0
+                    ),
+
+                  length:
+                    String(
+                      row.length_mm ||
+                        0
+                    ),
+
+                  quantity:
+                    String(
+                      row.quantity ||
+                        0
+                    ),
+                })
+              ),
+          })
+        )
 
       if (
-        loadedItems.length === 0
+        mappedItems.length ===
+        0
       ) {
-        loadedItems = [
+        setItems([
           {
             id:
               crypto.randomUUID(),
+
             description: '',
+
             materials: [
               {
                 id:
                   crypto.randomUUID(),
+
                 materialId:
-                  materialsResult.data?.[0]
-                    ?.id || '',
-                width: '1000',
-                height: '1000',
-                length: '1000',
-                quantity: '1',
+                  loadedMaterials[0]
+                    ?.id ||
+                  '',
+
+                width:
+                  '1000',
+
+                height:
+                  '1000',
+
+                length:
+                  '1000',
+
+                quantity:
+                  '1',
               },
             ],
           },
-        ]
+        ])
+      } else {
+        setItems(
+          mappedItems
+        )
       }
-
-      setItems(loadedItems)
-    } catch (error: any) {
+    } catch (
+      error: any
+    ) {
       console.error(
-        'Edit page load error:',
+        'Edit costing load error:',
         error
       )
 
@@ -333,40 +542,59 @@ export default function EditQuotationPage() {
   }
 
   function addItem() {
-    setItems((current) => [
-      ...current,
-      {
-        id:
-          crypto.randomUUID(),
-        description: '',
-        materials: [
-          {
-            id:
-              crypto.randomUUID(),
-            materialId:
-              materials[0]?.id || '',
-            width: '1000',
-            height: '1000',
-            length: '1000',
-            quantity: '1',
-          },
-        ],
-      },
-    ])
+    setItems(
+      (current) => [
+        ...current,
+
+        {
+          id:
+            crypto.randomUUID(),
+
+          description: '',
+
+          materials: [
+            {
+              id:
+                crypto.randomUUID(),
+
+              materialId:
+                materials[0]?.id ||
+                '',
+
+              width:
+                '1000',
+
+              height:
+                '1000',
+
+              length:
+                '1000',
+
+              quantity:
+                '1',
+            },
+          ],
+        },
+      ]
+    )
   }
 
   function removeItem(
     itemId: string
   ) {
-    if (items.length === 1) {
+    if (
+      items.length <= 1
+    ) {
       return
     }
 
-    setItems((current) =>
-      current.filter(
-        (item) =>
-          item.id !== itemId
-      )
+    setItems(
+      (current) =>
+        current.filter(
+          (item) =>
+            item.id !==
+            itemId
+        )
     )
   }
 
@@ -374,43 +602,62 @@ export default function EditQuotationPage() {
     itemId: string,
     value: string
   ) {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              description: value,
-            }
-          : item
-      )
+    setItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id ===
+            itemId
+              ? {
+                  ...item,
+                  description:
+                    value,
+                }
+              : item
+        )
     )
   }
 
   function addMaterial(
     itemId: string
   ) {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              materials: [
-                ...item.materials,
-                {
-                  id:
-                    crypto.randomUUID(),
-                  materialId:
-                    materials[0]
-                      ?.id || '',
-                  width: '1000',
-                  height: '1000',
-                  length: '1000',
-                  quantity: '1',
-                },
-              ],
-            }
-          : item
-      )
+    setItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id ===
+            itemId
+              ? {
+                  ...item,
+
+                  materials: [
+                    ...item.materials,
+
+                    {
+                      id:
+                        crypto.randomUUID(),
+
+                      materialId:
+                        materials[0]
+                          ?.id ||
+                        '',
+
+                      width:
+                        '1000',
+
+                      height:
+                        '1000',
+
+                      length:
+                        '1000',
+
+                      quantity:
+                        '1',
+                    },
+                  ],
+                }
+              : item
+        )
     )
   }
 
@@ -418,61 +665,75 @@ export default function EditQuotationPage() {
     itemId: string,
     rowId: string
   ) {
-    setItems((current) =>
-      current.map((item) => {
-        if (
-          item.id !== itemId
-        ) {
-          return item
-        }
+    setItems(
+      (current) =>
+        current.map(
+          (item) => {
+            if (
+              item.id !==
+              itemId
+            ) {
+              return item
+            }
 
-        if (
-          item.materials.length === 1
-        ) {
-          return item
-        }
+            if (
+              item.materials
+                .length <= 1
+            ) {
+              return item
+            }
 
-        return {
-          ...item,
-          materials:
-            item.materials.filter(
-              (row) =>
-                row.id !== rowId
-            ),
-        }
-      })
+            return {
+              ...item,
+
+              materials:
+                item.materials.filter(
+                  (row) =>
+                    row.id !==
+                    rowId
+                ),
+            }
+          }
+        )
     )
   }
 
   function updateMaterialRow(
     itemId: string,
     rowId: string,
-    field: keyof MaterialRow,
+    field:
+      keyof MaterialRow,
     value: string
   ) {
-    setItems((current) =>
-      current.map((item) => {
-        if (
-          item.id !== itemId
-        ) {
-          return item
-        }
+    setItems(
+      (current) =>
+        current.map(
+          (item) => {
+            if (
+              item.id !==
+              itemId
+            ) {
+              return item
+            }
 
-        return {
-          ...item,
-          materials:
-            item.materials.map(
-              (row) =>
-                row.id === rowId
-                  ? {
-                      ...row,
-                      [field]:
-                        value,
-                    }
-                  : row
-            ),
-        }
-      })
+            return {
+              ...item,
+
+              materials:
+                item.materials.map(
+                  (row) =>
+                    row.id ===
+                    rowId
+                      ? {
+                          ...row,
+                          [field]:
+                            value,
+                        }
+                      : row
+                ),
+            }
+          }
+        )
     )
   }
 
@@ -498,27 +759,30 @@ export default function EditQuotationPage() {
 
     const unit =
       String(
-        material.unit || ''
+        material.unit ||
+          ''
       )
         .trim()
         .toLowerCase()
 
     const quantity =
-      Number(row.quantity) || 0
+      Number(
+        row.quantity
+      ) || 0
 
     const costPrice =
       Number(
         material.cost_price
       ) || 0
 
+    const wastage =
+      Number(
+        material.wastage_percent
+      ) || 0
+
     const wastageMultiplier =
       1 +
-      (
-        Number(
-          material.wastage_percent
-        ) || 0
-      ) /
-        100
+      wastage / 100
 
     let areaSqft = 0
     let requiredQty = 0
@@ -528,14 +792,22 @@ export default function EditQuotationPage() {
       unit === 'sheet' ||
       unit === 'sqft'
     ) {
+      const widthMm =
+        Number(
+          row.width
+        ) || 0
+
+      const heightMm =
+        Number(
+          row.height
+        ) || 0
+
       const widthFt =
-        (Number(row.width) ||
-          0) /
+        widthMm /
         304.8
 
       const heightFt =
-        (Number(row.height) ||
-          0) /
+        heightMm /
         304.8
 
       areaSqft =
@@ -546,24 +818,19 @@ export default function EditQuotationPage() {
       if (
         unit === 'sheet'
       ) {
-        const areaWithWastage =
-          areaSqft *
-          wastageMultiplier
-
         requiredQty =
           Math.ceil(
-            areaWithWastage /
+            (
+              areaSqft *
+              wastageMultiplier
+            ) /
               32
           )
 
         materialCost =
           requiredQty *
           costPrice
-      }
-
-      if (
-        unit === 'sqft'
-      ) {
+      } else {
         requiredQty =
           areaSqft *
           wastageMultiplier
@@ -575,9 +842,13 @@ export default function EditQuotationPage() {
     } else if (
       unit === 'ft'
     ) {
+      const lengthMm =
+        Number(
+          row.length
+        ) || 0
+
       const lengthFt =
-        (Number(row.length) ||
-          0) /
+        lengthMm /
         304.8
 
       requiredQty =
@@ -607,11 +878,14 @@ export default function EditQuotationPage() {
   }
 
   function calculateItemTotal(
-    item: QuoteItem
+    item: CostingItem
   ) {
     return item.materials.reduce(
-      (sum, row) =>
-        sum +
+      (
+        total,
+        row
+      ) =>
+        total +
         calculateMaterialRow(
           row
         ).materialCost,
@@ -619,195 +893,236 @@ export default function EditQuotationPage() {
     )
   }
 
-  const totals = useMemo(() => {
-    const materialCost =
-      items.reduce(
-        (sum, item) =>
-          sum +
-          calculateItemTotal(
+  const totals =
+    useMemo(() => {
+      const materialCost =
+        items.reduce(
+          (
+            total,
             item
-          ),
-        0
-      )
+          ) =>
+            total +
+            calculateItemTotal(
+              item
+            ),
+          0
+        )
 
-    const labour =
-      Number(labourCost) ||
-      0
+      const labour =
+        Number(
+          labourCost
+        ) || 0
 
-    const transport =
-      Number(transportCost) ||
-      0
+      const transport =
+        Number(
+          transportCost
+        ) || 0
 
-    const installation =
-      Number(
-        installationCost
-      ) || 0
+      const installation =
+        Number(
+          installationCost
+        ) || 0
 
-    const dismantling =
-      Number(
-        dismantlingCost
-      ) || 0
+      const dismantling =
+        Number(
+          dismantlingCost
+        ) || 0
 
-    const totalCost =
-      materialCost +
-      labour +
-      transport +
-      installation +
-      dismantling
+      const totalCost =
+        materialCost +
+        labour +
+        transport +
+        installation +
+        dismantling
 
-    const margin =
-      Number(targetMargin) ||
-      0
+      const margin =
+        Number(
+          targetMargin
+        ) || 0
 
-    let sellingPrice =
-      totalCost
-
-    let grossProfit = 0
-    let grossMargin = 0
-
-    if (
-      margin > 0 &&
-      margin < 100
-    ) {
-      sellingPrice =
-        totalCost /
-        (1 - margin / 100)
-
-      grossProfit =
-        sellingPrice -
+      let sellingPrice =
         totalCost
 
-      grossMargin =
-        sellingPrice > 0
-          ? (
-              grossProfit /
-              sellingPrice
-            ) *
-            100
-          : 0
-    }
+      let grossProfit = 0
+      let grossMargin = 0
 
-    return {
-      materialCost,
-      totalCost,
-      sellingPrice,
-      grossProfit,
-      grossMargin,
-    }
-  }, [
-    items,
-    materials,
-    labourCost,
-    transportCost,
-    installationCost,
-    dismantlingCost,
-    targetMargin,
-  ])
+      if (
+        margin > 0 &&
+        margin < 100
+      ) {
+        sellingPrice =
+          totalCost /
+          (
+            1 -
+            margin / 100
+          )
+
+        grossProfit =
+          sellingPrice -
+          totalCost
+
+        grossMargin =
+          sellingPrice > 0
+            ? (
+                grossProfit /
+                sellingPrice
+              ) *
+              100
+            : 0
+      }
+
+      return {
+        materialCost,
+        labour,
+        transport,
+        installation,
+        dismantling,
+        totalCost,
+        sellingPrice,
+        grossProfit,
+        grossMargin,
+      }
+    }, [
+      items,
+      materials,
+      labourCost,
+      transportCost,
+      installationCost,
+      dismantlingCost,
+      targetMargin,
+    ])
 
   async function saveChanges() {
-    if (!quotation) {
+    if (
+      !quotation ||
+      !profile
+    ) {
       return
     }
 
-    if (!customerName.trim()) {
+    if (
+      !customerName.trim()
+    ) {
       setErrorMessage(
         'Please enter Customer Name.'
       )
       return
     }
 
-    if (!projectName.trim()) {
+    if (
+      !projectName.trim()
+    ) {
       setErrorMessage(
         'Please enter Project Name.'
       )
       return
     }
 
+    const emptyItem =
+      items.some(
+        (item) =>
+          !item.description.trim()
+      )
+
+    if (emptyItem) {
+      setErrorMessage(
+        'Please enter description for every costing item.'
+      )
+      return
+    }
+
+    const invalidMaterial =
+      items.some(
+        (item) =>
+          item.materials.some(
+            (row) =>
+              !row.materialId
+          )
+      )
+
+    if (invalidMaterial) {
+      setErrorMessage(
+        'Please select material for every row.'
+      )
+      return
+    }
+
+    const confirmed =
+      window.confirm(
+        `Save changes to ${quotation.quotation_no}?`
+      )
+
+    if (!confirmed) {
+      return
+    }
+
     setSaving(true)
     setErrorMessage('')
-    setSuccessMessage('')
 
     try {
       const {
         error:
           quotationError,
-      } = await supabase
-        .from('quotations')
-        .update({
-          customer_name:
-            customerName.trim(),
+      } =
+        await supabase
+          .from(
+            'quotations'
+          )
+          .update({
+            customer_name:
+              customerName.trim(),
 
-          project_name:
-            projectName.trim(),
+            project_name:
+              projectName.trim(),
 
-          quotation_date:
-            quotationDate,
+            quotation_date:
+              quotationDate,
 
-          target_margin:
-            Number(
-              targetMargin
-            ) || 0,
-
-          material_cost:
-            totals.materialCost,
-
-          labour_cost:
-            Number(
-              labourCost
-            ) || 0,
-
-          transport_cost:
-            Number(
-              transportCost
-            ) || 0,
-
-          installation_cost:
-            Number(
-              installationCost
-            ) || 0,
-
-          dismantling_cost:
-            Number(
-              dismantlingCost
-            ) || 0,
-
-          logistics_cost:
-            (
+            target_margin:
               Number(
-                transportCost
-              ) || 0
-            ) +
-            (
-              Number(
-                installationCost
-              ) || 0
-            ) +
-            (
-              Number(
-                dismantlingCost
-              ) || 0
-            ),
+                targetMargin
+              ) || 0,
 
-          total_cost:
-            totals.totalCost,
+            material_cost:
+              totals.materialCost,
 
-          selling_price:
-            totals.sellingPrice,
+            labour_cost:
+              totals.labour,
 
-          gross_profit:
-            totals.grossProfit,
+            transport_cost:
+              totals.transport,
 
-          gross_margin:
-            totals.grossMargin,
+            installation_cost:
+              totals.installation,
 
-          updated_at:
-            new Date()
-              .toISOString(),
-        })
-        .eq(
-          'id',
-          quotationId
-        )
+            dismantling_cost:
+              totals.dismantling,
+
+            logistics_cost:
+              totals.transport +
+              totals.installation +
+              totals.dismantling,
+
+            total_cost:
+              totals.totalCost,
+
+            selling_price:
+              totals.sellingPrice,
+
+            gross_profit:
+              totals.grossProfit,
+
+            gross_margin:
+              totals.grossMargin,
+
+            updated_at:
+              new Date()
+                .toISOString(),
+          })
+          .eq(
+            'id',
+            quotation.id
+          )
 
       if (
         quotationError
@@ -817,21 +1132,20 @@ export default function EditQuotationPage() {
 
       const {
         error:
-          deleteMaterialError,
-      } = await supabase
-        .from(
-          'quotation_materials'
-        )
-        .delete()
-        .eq(
-          'quotation_id',
-          quotationId
-        )
+          deleteError,
+      } =
+        await supabase
+          .from(
+            'quotation_materials'
+          )
+          .delete()
+          .eq(
+            'quotation_id',
+            quotation.id
+          )
 
-      if (
-        deleteMaterialError
-      ) {
-        throw deleteMaterialError
+      if (deleteError) {
+        throw deleteError
       }
 
       const materialRows =
@@ -846,10 +1160,11 @@ export default function EditQuotationPage() {
 
                 return {
                   quotation_id:
-                    quotationId,
+                    quotation.id,
 
                   item_description:
-                    item.description,
+                    item.description
+                      .trim(),
 
                   material_id:
                     row.materialId,
@@ -890,45 +1205,49 @@ export default function EditQuotationPage() {
       ) {
         const {
           error:
-            materialInsertError,
-        } = await supabase
-          .from(
-            'quotation_materials'
-          )
-          .insert(
-            materialRows
-          )
+            insertError,
+        } =
+          await supabase
+            .from(
+              'quotation_materials'
+            )
+            .insert(
+              materialRows
+            )
 
         if (
-          materialInsertError
+          insertError
         ) {
-          throw materialInsertError
+          throw insertError
         }
       }
 
       const {
-        error: logError,
-      } = await supabase
-        .from(
-          'quotation_logs'
-        )
-        .insert({
-          quotation_id:
-            quotationId,
+        error:
+          logError,
+      } =
+        await supabase
+          .from(
+            'quotation_logs'
+          )
+          .insert({
+            quotation_id:
+              quotation.id,
 
-          quotation_no:
-            quotationNo,
+            quotation_no:
+              quotation.quotation_no,
 
-          action: 'EDIT',
+            action:
+              'EDIT',
 
-          details:
-            `Edited costing - ${customerName.trim()} ${projectName.trim()}`,
+            details:
+              `Edited costing - ${customerName.trim()} ${projectName.trim()}`,
 
-          performed_by:
-            profile?.full_name ||
-            profile?.email ||
-            'User',
-        })
+            performed_by:
+              profile.full_name ||
+              profile.email ||
+              'User',
+          })
 
       if (logError) {
         console.error(
@@ -937,12 +1256,14 @@ export default function EditQuotationPage() {
         )
       }
 
-      setSuccessMessage(
-        `${quotationNo} updated successfully.`
+      router.push(
+        `/quotations/${quotation.id}`
       )
 
-      await loadPage()
-    } catch (error: any) {
+      router.refresh()
+    } catch (
+      error: any
+    ) {
       console.error(
         'Save edit error:',
         error
@@ -965,8 +1286,10 @@ export default function EditQuotationPage() {
     ).toLocaleString(
       'en-MY',
       {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits:
+          2,
+        maximumFractionDigits:
+          2,
       }
     )}`
   }
@@ -979,25 +1302,40 @@ export default function EditQuotationPage() {
     )
   }
 
+  if (!quotation) {
+    return (
+      <main className="loadingPage">
+        Costing not found.
+      </main>
+    )
+  }
+
   return (
     <main className="page">
       <header className="topBar">
         <Link
-          href="/cost-listings"
+          href={`/quotations/${quotation.id}`}
           className="backButton"
         >
           ←
         </Link>
 
-        <div>
+        <div className="titleArea">
           <div className="topTitle">
             Edit Costing
           </div>
 
           <div className="topSubtitle">
-            {quotationNo}
+            {quotation.quotation_no}
           </div>
         </div>
+
+        <StatusBadge
+          status={
+            quotation.status ||
+            'draft'
+          }
+        />
       </header>
 
       {errorMessage && (
@@ -1006,31 +1344,16 @@ export default function EditQuotationPage() {
         </div>
       )}
 
-      {successMessage && (
-        <div className="successBox">
-          {successMessage}
-        </div>
-      )}
-
       <section className="section">
         <h2>
-          Costing Information
+          Project Information
         </h2>
 
         <div className="formGrid">
           <Field label="Costing No.">
             <input
-              value={quotationNo}
-              readOnly
-              className="input readonly"
-            />
-          </Field>
-
-          <Field label="Status">
-            <input
               value={
-                quotation?.status ||
-                'draft'
+                quotation.quotation_no
               }
               readOnly
               className="input readonly"
@@ -1040,7 +1363,9 @@ export default function EditQuotationPage() {
           <Field label="Date">
             <input
               type="date"
-              value={quotationDate}
+              value={
+                quotationDate
+              }
               onChange={(e) =>
                 setQuotationDate(
                   e.target.value
@@ -1052,7 +1377,9 @@ export default function EditQuotationPage() {
 
           <Field label="Customer Name">
             <input
-              value={customerName}
+              value={
+                customerName
+              }
               onChange={(e) =>
                 setCustomerName(
                   e.target.value
@@ -1064,7 +1391,9 @@ export default function EditQuotationPage() {
 
           <Field label="Project Name">
             <input
-              value={projectName}
+              value={
+                projectName
+              }
               onChange={(e) =>
                 setProjectName(
                   e.target.value
@@ -1076,16 +1405,14 @@ export default function EditQuotationPage() {
         </div>
       </section>
 
-      <div className="itemsHeader">
-        <div>
-          <h2>
-            Costing Items
-          </h2>
+      <div className="sectionTitle">
+        <h2>
+          Costing Items
+        </h2>
 
-          <p>
-            Edit items and materials
-          </p>
-        </div>
+        <p>
+          Edit materials and dimensions
+        </p>
       </div>
 
       {items.map(
@@ -1094,33 +1421,36 @@ export default function EditQuotationPage() {
           itemIndex
         ) => (
           <section
-            key={item.id}
+            key={
+              item.id
+            }
             className="itemCard"
           >
-            <div className="rowBetween">
-              <div className="itemTitle">
+            <div className="itemHeader">
+              <div className="itemNumber">
                 Item{' '}
-                {itemIndex + 1}
+                {itemIndex +
+                  1}
               </div>
 
               <button
                 type="button"
+                disabled={
+                  items.length ===
+                  1
+                }
                 onClick={() =>
                   removeItem(
                     item.id
                   )
                 }
-                disabled={
-                  items.length ===
-                  1
-                }
-                className="textButton danger"
+                className="removeButton"
               >
                 Remove Item
               </button>
             </div>
 
-            <Field label="Description">
+            <Field label="Item Description">
               <input
                 value={
                   item.description
@@ -1135,7 +1465,7 @@ export default function EditQuotationPage() {
               />
             </Field>
 
-            <div className="subHeading">
+            <div className="materialsTitle">
               Materials
             </div>
 
@@ -1152,14 +1482,15 @@ export default function EditQuotationPage() {
                 const unit =
                   result.unit
 
-                const showArea =
+                const showWidthHeight =
                   unit ===
                     'sheet' ||
                   unit ===
                     'sqft'
 
                 const showLength =
-                  unit === 'ft'
+                  unit ===
+                  'ft'
 
                 return (
                   <div
@@ -1168,7 +1499,7 @@ export default function EditQuotationPage() {
                     }
                     className="materialCard"
                   >
-                    <div className="rowBetween">
+                    <div className="materialHeader">
                       <strong>
                         Material{' '}
                         {materialIndex +
@@ -1177,19 +1508,18 @@ export default function EditQuotationPage() {
 
                       <button
                         type="button"
+                        disabled={
+                          item.materials
+                            .length ===
+                          1
+                        }
                         onClick={() =>
                           removeMaterial(
                             item.id,
                             row.id
                           )
                         }
-                        disabled={
-                          item
-                            .materials
-                            .length ===
-                          1
-                        }
-                        className="textButton danger"
+                        className="smallRemoveButton"
                       >
                         Remove
                       </button>
@@ -1205,32 +1535,38 @@ export default function EditQuotationPage() {
                             item.id,
                             row.id,
                             'materialId',
-                            e.target
-                              .value
+                            e.target.value
                           )
                         }
                         className="input"
                       >
+                        <option value="">
+                          Select Material
+                        </option>
+
                         {materials.map(
-                          (m) => (
+                          (material) => (
                             <option
                               key={
-                                m.id
+                                material.id
                               }
                               value={
-                                m.id
+                                material.id
                               }
                             >
                               {
-                                m.name
-                              }{' '}
-                              - RM
-                              {
-                                m.cost_price
+                                material.name
                               }
+                              {' — '}
+                              RM
+                              {Number(
+                                material.cost_price
+                              ).toFixed(
+                                2
+                              )}
                               /
                               {
-                                m.unit
+                                material.unit
                               }
                             </option>
                           )
@@ -1238,24 +1574,21 @@ export default function EditQuotationPage() {
                       </select>
                     </Field>
 
-                    {showArea && (
+                    {showWidthHeight && (
                       <div className="formGrid">
                         <Field label="Width (mm)">
                           <input
                             type="number"
+                            min="0"
                             value={
                               row.width
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateMaterialRow(
                                 item.id,
                                 row.id,
                                 'width',
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                             className="input"
@@ -1265,19 +1598,16 @@ export default function EditQuotationPage() {
                         <Field label="Height (mm)">
                           <input
                             type="number"
+                            min="0"
                             value={
                               row.height
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateMaterialRow(
                                 item.id,
                                 row.id,
                                 'height',
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                             className="input"
@@ -1290,19 +1620,16 @@ export default function EditQuotationPage() {
                       <Field label="Length (mm)">
                         <input
                           type="number"
+                          min="0"
                           value={
                             row.length
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={(e) =>
                             updateMaterialRow(
                               item.id,
                               row.id,
                               'length',
-                              e
-                                .target
-                                .value
+                              e.target.value
                             )
                           }
                           className="input"
@@ -1313,26 +1640,25 @@ export default function EditQuotationPage() {
                     <Field label="Quantity">
                       <input
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={
                           row.quantity
                         }
-                        onChange={(
-                          e
-                        ) =>
+                        onChange={(e) =>
                           updateMaterialRow(
                             item.id,
                             row.id,
                             'quantity',
-                            e.target
-                              .value
+                            e.target.value
                           )
                         }
                         className="input"
                       />
                     </Field>
 
-                    <div className="calcBox">
-                      {showArea && (
+                    <div className="calculationBox">
+                      {showWidthHeight && (
                         <CalcLine
                           label="Area"
                           value={`${result.areaSqft.toFixed(
@@ -1342,19 +1668,35 @@ export default function EditQuotationPage() {
                       )}
 
                       <CalcLine
+                        label="Wastage"
+                        value={`${Number(
+                          result.material
+                            ?.wastage_percent ||
+                            0
+                        ).toFixed(
+                          1
+                        )}%`}
+                      />
+
+                      <CalcLine
                         label="Required"
                         value={
                           unit ===
                           'sheet'
-                            ? `${result.requiredQty} sheet(s)`
+                            ? `${result.requiredQty.toFixed(
+                                0
+                              )} sheet(s)`
                             : `${result.requiredQty.toFixed(
                                 2
-                              )} ${unit}`
+                              )} ${
+                                unit ||
+                                'unit'
+                              }`
                         }
                       />
 
                       <CalcLine
-                        label="Material Cost"
+                        label="Cost"
                         value={formatRM(
                           result.materialCost
                         )}
@@ -1379,7 +1721,7 @@ export default function EditQuotationPage() {
 
             <div className="itemTotal">
               <span>
-                Item Material Total
+                Item Material Cost
               </span>
 
               <strong>
@@ -1397,7 +1739,7 @@ export default function EditQuotationPage() {
       <button
         type="button"
         onClick={addItem}
-        className="primaryButton"
+        className="addItemButton"
       >
         + Add Item
       </button>
@@ -1408,16 +1750,18 @@ export default function EditQuotationPage() {
         </h2>
 
         <div className="formGrid">
-          <MoneyInput
-            label="Labour Cost"
-            value={labourCost}
+          <MoneyField
+            label="Labour"
+            value={
+              labourCost
+            }
             setValue={
               setLabourCost
             }
           />
 
-          <MoneyInput
-            label="Transport Cost"
+          <MoneyField
+            label="Transport"
             value={
               transportCost
             }
@@ -1426,8 +1770,8 @@ export default function EditQuotationPage() {
             }
           />
 
-          <MoneyInput
-            label="Installation Cost"
+          <MoneyField
+            label="Installation"
             value={
               installationCost
             }
@@ -1436,8 +1780,8 @@ export default function EditQuotationPage() {
             }
           />
 
-          <MoneyInput
-            label="Dismantling Cost"
+          <MoneyField
+            label="Dismantling"
             value={
               dismantlingCost
             }
@@ -1450,13 +1794,17 @@ export default function EditQuotationPage() {
 
       <section className="section">
         <h2>
-          Pricing
+          Selling Price
         </h2>
 
         <Field label="Target Gross Margin (%)">
           <input
             type="number"
-            value={targetMargin}
+            min="0"
+            max="99"
+            value={
+              targetMargin
+            }
             onChange={(e) =>
               setTargetMargin(
                 e.target.value
@@ -1467,9 +1815,9 @@ export default function EditQuotationPage() {
         </Field>
       </section>
 
-      <section className="summaryCard">
+      <section className="summarySection">
         <h2>
-          Costing Summary
+          Updated Summary
         </h2>
 
         <SummaryLine
@@ -1480,19 +1828,48 @@ export default function EditQuotationPage() {
         />
 
         <SummaryLine
+          label="Labour"
+          value={formatRM(
+            totals.labour
+          )}
+        />
+
+        <SummaryLine
+          label="Transport"
+          value={formatRM(
+            totals.transport
+          )}
+        />
+
+        <SummaryLine
+          label="Installation"
+          value={formatRM(
+            totals.installation
+          )}
+        />
+
+        <SummaryLine
+          label="Dismantling"
+          value={formatRM(
+            totals.dismantling
+          )}
+        />
+
+        <div className="summaryDivider" />
+
+        <SummaryLine
           label="TOTAL COST"
           value={formatRM(
             totals.totalCost
           )}
-          bold
         />
 
         <SummaryLine
-          label="Selling Price"
+          label="SELLING PRICE"
           value={formatRM(
             totals.sellingPrice
           )}
-          bold
+          highlight
         />
 
         <SummaryLine
@@ -1508,6 +1885,15 @@ export default function EditQuotationPage() {
             2
           )}%`}
         />
+      </section>
+
+      <div className="bottomActions">
+        <Link
+          href={`/quotations/${quotation.id}`}
+          className="cancelEditButton"
+        >
+          Cancel
+        </Link>
 
         <button
           type="button"
@@ -1523,7 +1909,7 @@ export default function EditQuotationPage() {
             ? 'Saving...'
             : 'Save Changes'}
         </button>
-      </section>
+      </div>
 
       <style jsx global>{`
         * {
@@ -1534,15 +1920,16 @@ export default function EditQuotationPage() {
         body {
           margin: 0;
           padding: 0;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background: var(--mj-background);
+          color: var(--mj-text);
+          font-family: Arial, Helvetica, sans-serif;
         }
 
         .page {
           min-height: 100vh;
           max-width: 1000px;
           margin: 0 auto;
-          padding: 18px 14px 40px;
+          padding: 18px 14px 50px;
         }
 
         .loadingPage {
@@ -1550,8 +1937,9 @@ export default function EditQuotationPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background: var(--mj-background);
+          color: var(--mj-primary);
+          font-weight: 700;
         }
 
         .topBar {
@@ -1559,6 +1947,10 @@ export default function EditQuotationPage() {
           align-items: center;
           gap: 12px;
           margin-bottom: 18px;
+        }
+
+        .titleArea {
+          flex: 1;
         }
 
         .backButton {
@@ -1569,81 +1961,57 @@ export default function EditQuotationPage() {
           justify-content: center;
           border-radius: 12px;
           background: white;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--mj-border);
+          color: var(--mj-primary);
           text-decoration: none;
-          color: #0f766e;
           font-size: 24px;
-          font-weight: 700;
+          font-weight: 800;
         }
 
         .topTitle {
           font-size: 24px;
           font-weight: 800;
-          color: #111827;
         }
 
         .topSubtitle {
           margin-top: 3px;
-          font-size: 13px;
-          color: #6b7280;
+          color: var(--mj-primary-deep);
+          font-size: 12px;
+          font-weight: 700;
         }
 
         .section,
         .itemCard,
-        .summaryCard {
+        .summarySection {
           background: white;
-          border: 1px solid #e8ecf1;
-          border-radius: 20px;
-          padding: 18px;
-          margin-bottom: 18px;
+          border: 1px solid var(--mj-border);
+          border-radius: 18px;
+          padding: 17px;
+          margin-bottom: 16px;
+          box-shadow:
+            0 8px 24px
+            rgba(7, 89, 133, 0.045);
         }
 
         .section h2,
-        .summaryCard h2 {
+        .summarySection h2 {
           margin: 0 0 16px;
+          font-size: 19px;
+        }
+
+        .sectionTitle {
+          margin: 22px 0 12px;
+        }
+
+        .sectionTitle h2 {
+          margin: 0;
           font-size: 20px;
         }
 
-        .itemsHeader {
-          margin: 24px 0 14px;
-        }
-
-        .itemsHeader h2 {
-          margin: 0;
-          font-size: 21px;
-        }
-
-        .itemsHeader p {
-          margin: 5px 0 0;
-          color: #6b7280;
-          font-size: 13px;
-        }
-
-        .itemTitle {
-          font-size: 19px;
-          font-weight: 800;
-        }
-
-        .subHeading {
-          margin: 18px 0 10px;
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .materialCard {
-          border: 1px solid #e5e7eb;
-          background: #fafbfc;
-          border-radius: 16px;
-          padding: 14px;
-          margin-bottom: 12px;
-        }
-
-        .rowBetween {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 10px;
+        .sectionTitle p {
+          margin: 4px 0 0;
+          color: var(--mj-muted);
+          font-size: 12px;
         }
 
         .formGrid {
@@ -1654,122 +2022,284 @@ export default function EditQuotationPage() {
         }
 
         .field {
-          margin-bottom: 10px;
-          min-width: 0;
+          margin-bottom: 12px;
         }
 
         .label {
           display: block;
           margin-bottom: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #374151;
+          color: #334155;
+          font-size: 12px;
+          font-weight: 700;
         }
 
         .input {
           width: 100%;
           padding: 12px 13px;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--mj-border);
           border-radius: 10px;
           background: white;
-          color: #111827;
-          font-size: 15px;
+          color: var(--mj-text);
+          font-size: 14px;
+          outline: none;
+        }
+
+        .input:focus {
+          border-color: var(--mj-primary);
+          box-shadow:
+            0 0 0 3px
+            rgba(7, 152, 212, 0.1);
         }
 
         .readonly {
-          background: #f3f4f6;
+          background: #f2f8fc;
+          color: var(--mj-primary-deep);
           font-weight: 700;
         }
 
-        .calcBox {
-          margin-top: 10px;
-          background: white;
-          border-radius: 12px;
-          padding: 12px;
-          border: 1px solid #edf0f3;
+        .itemHeader,
+        .materialHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 12px;
         }
 
-        .calcLine,
-        .summaryLine {
+        .itemNumber {
+          color: var(--mj-primary);
+          font-size: 18px;
+          font-weight: 800;
+        }
+
+        .removeButton,
+        .smallRemoveButton {
+          border: none;
+          background: transparent;
+          color: #b91c1c;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .removeButton:disabled,
+        .smallRemoveButton:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
+        .materialsTitle {
+          margin: 15px 0 9px;
+          color: var(--mj-primary-deep);
+          font-weight: 800;
+          font-size: 14px;
+        }
+
+        .materialCard {
+          padding: 14px;
+          margin-bottom: 12px;
+          border-radius: 14px;
+          background:
+            linear-gradient(
+              145deg,
+              #f7fcff,
+              #eef9fe
+            );
+          border: 1px solid var(--mj-border);
+        }
+
+        .calculationBox {
+          margin-top: 8px;
+          padding: 10px;
+          background: white;
+          border: 1px solid var(--mj-border);
+          border-radius: 11px;
+        }
+
+        .calcLine {
           display: flex;
           justify-content: space-between;
           gap: 12px;
-          padding: 5px 0;
+          padding: 4px 0;
+          color: var(--mj-muted);
+          font-size: 12px;
+        }
+
+        .calcLine strong {
+          color: var(--mj-primary-deep);
         }
 
         .outlineButton,
-        .primaryButton,
-        .saveButton {
+        .addItemButton {
           width: 100%;
-          border: none;
-          border-radius: 12px;
-          padding: 13px 16px;
-          font-size: 15px;
-          font-weight: 700;
+          padding: 12px;
+          border-radius: 11px;
+          font-size: 13px;
+          font-weight: 800;
           cursor: pointer;
         }
 
         .outlineButton {
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--mj-primary);
           background: white;
-          color: #111827;
+          color: var(--mj-primary);
         }
 
-        .primaryButton,
-        .saveButton {
-          background: #0f766e;
-          color: white;
-          margin-bottom: 18px;
-        }
-
-        .textButton {
+        .addItemButton {
+          margin-bottom: 16px;
           border: none;
-          background: transparent;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .danger {
-          color: #b91c1c;
+          color: white;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
         }
 
         .itemTotal {
-          margin-top: 14px;
           display: flex;
           justify-content: space-between;
+          gap: 12px;
+          margin-top: 14px;
+          padding-top: 12px;
+          border-top: 1px solid var(--mj-border);
         }
 
-        .summaryLine.bold {
+        .itemTotal strong {
+          color: var(--mj-primary);
+        }
+
+        .summaryLine {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 7px 0;
+          color: #475569;
+          font-size: 14px;
+        }
+
+        .summaryDivider {
+          height: 1px;
+          margin: 8px 0;
+          background: var(--mj-border);
+        }
+
+        .summaryHighlight {
+          margin: 8px -5px;
+          padding: 13px;
+          border-radius: 11px;
+          background:
+            linear-gradient(
+              135deg,
+              #e4f6fd,
+              #f1fbff
+            );
+          color: var(--mj-primary-deep);
+          border: 1px solid var(--mj-border);
+          font-size: 18px;
           font-weight: 800;
         }
 
-        .errorBox,
-        .successBox {
-          margin-bottom: 14px;
-          padding: 12px;
-          border-radius: 10px;
-          font-size: 13px;
+        .summaryHighlight strong {
+          color: var(--mj-primary-deep);
+        }
+
+        .bottomActions {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 10px;
+        }
+
+        .cancelEditButton,
+        .saveButton {
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .cancelEditButton {
+          background: white;
+          border: 1px solid var(--mj-border);
+          color: var(--mj-primary-deep);
+          text-decoration: none;
+        }
+
+        .saveButton {
+          border: none;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
+          color: white;
+          cursor: pointer;
+          box-shadow:
+            0 9px 22px
+            rgba(7, 152, 212, 0.18);
+        }
+
+        .saveButton:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .statusBadge {
+          display: inline-flex;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: capitalize;
+        }
+
+        .statusDraft {
+          background: var(--status-draft-bg);
+          color: var(--status-draft-text);
+        }
+
+        .statusPending {
+          background: var(--status-pending-bg);
+          color: var(--status-pending-text);
+        }
+
+        .statusApproved {
+          background: var(--status-approved-bg);
+          color: var(--status-approved-text);
+        }
+
+        .statusRejected {
+          background: var(--status-rejected-bg);
+          color: var(--status-rejected-text);
         }
 
         .errorBox {
+          margin-bottom: 14px;
+          padding: 12px;
+          border-radius: 10px;
           background: #fee2e2;
           color: #991b1b;
-        }
-
-        .successBox {
-          background: #dcfce7;
-          color: #166534;
-          font-weight: 700;
+          font-size: 13px;
         }
 
         @media (max-width: 650px) {
           .formGrid {
             grid-template-columns: 1fr;
           }
+        }
 
+        @media (max-width: 420px) {
           .page {
-            padding: 14px 12px 34px;
+            padding: 14px 12px 40px;
+          }
+
+          .bottomActions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -1795,7 +2325,7 @@ function Field({
   )
 }
 
-function MoneyInput({
+function MoneyField({
   label,
   value,
   setValue,
@@ -1807,9 +2337,13 @@ function MoneyInput({
   ) => void
 }) {
   return (
-    <Field label={`${label} (RM)`}>
+    <Field
+      label={`${label} Cost (RM)`}
+    >
       <input
         type="number"
+        min="0"
+        step="0.01"
         value={value}
         onChange={(e) =>
           setValue(
@@ -1831,7 +2365,10 @@ function CalcLine({
 }) {
   return (
     <div className="calcLine">
-      <span>{label}</span>
+      <span>
+        {label}
+      </span>
+
       <strong>
         {value}
       </strong>
@@ -1842,17 +2379,17 @@ function CalcLine({
 function SummaryLine({
   label,
   value,
-  bold = false,
+  highlight = false,
 }: {
   label: string
   value: string
-  bold?: boolean
+  highlight?: boolean
 }) {
   return (
     <div
       className={
-        bold
-          ? 'summaryLine bold'
+        highlight
+          ? 'summaryLine summaryHighlight'
           : 'summaryLine'
       }
     >
@@ -1864,5 +2401,44 @@ function SummaryLine({
         {value}
       </strong>
     </div>
+  )
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: string
+}) {
+  const value =
+    status.toLowerCase()
+
+  let className =
+    'statusBadge statusDraft'
+
+  if (
+    value === 'pending'
+  ) {
+    className =
+      'statusBadge statusPending'
+  }
+
+  if (
+    value === 'approved'
+  ) {
+    className =
+      'statusBadge statusApproved'
+  }
+
+  if (
+    value === 'rejected'
+  ) {
+    className =
+      'statusBadge statusRejected'
+  }
+
+  return (
+    <span className={className}>
+      {status}
+    </span>
   )
 }

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+
 import { supabase } from '../../../lib/supabase'
+
 import {
   getCurrentProfile,
   type UserProfile,
@@ -101,9 +103,7 @@ export default function ApprovalsPage() {
       return
     }
 
-    setQuotations(
-      data || []
-    )
+    setQuotations(data || [])
   }
 
   const filteredQuotations =
@@ -392,6 +392,33 @@ export default function ApprovalsPage() {
     )
   }
 
+  const pendingCount =
+    quotations.filter(
+      (q) =>
+        String(
+          q.status || ''
+        ).toLowerCase() ===
+        'pending'
+    ).length
+
+  const approvedCount =
+    quotations.filter(
+      (q) =>
+        String(
+          q.status || ''
+        ).toLowerCase() ===
+        'approved'
+    ).length
+
+  const rejectedCount =
+    quotations.filter(
+      (q) =>
+        String(
+          q.status || ''
+        ).toLowerCase() ===
+        'rejected'
+    ).length
+
   return (
     <main className="page">
       <header className="topBar">
@@ -416,41 +443,20 @@ export default function ApprovalsPage() {
       <section className="summaryRow">
         <SummaryCard
           label="Pending"
-          value={
-            quotations.filter(
-              (q) =>
-                String(
-                  q.status || ''
-                ).toLowerCase() ===
-                'pending'
-            ).length
-          }
+          value={pendingCount}
+          tone="pending"
         />
 
         <SummaryCard
           label="Approved"
-          value={
-            quotations.filter(
-              (q) =>
-                String(
-                  q.status || ''
-                ).toLowerCase() ===
-                'approved'
-            ).length
-          }
+          value={approvedCount}
+          tone="approved"
         />
 
         <SummaryCard
           label="Rejected"
-          value={
-            quotations.filter(
-              (q) =>
-                String(
-                  q.status || ''
-                ).toLowerCase() ===
-                'rejected'
-            ).length
-          }
+          value={rejectedCount}
+          tone="rejected"
         />
       </section>
 
@@ -528,146 +534,153 @@ export default function ApprovalsPage() {
         )}
 
       {!loading &&
-        filteredQuotations.map(
-          (item) => {
-            const status =
-              String(
-                item.status ||
-                  'draft'
-              ).toLowerCase()
+        filteredQuotations.length >
+          0 && (
+          <div className="approvalList">
+            {filteredQuotations.map(
+              (item) => {
+                const status =
+                  String(
+                    item.status ||
+                      'draft'
+                  ).toLowerCase()
 
-            const processing =
-              processingId ===
-              item.id
+                const processing =
+                  processingId ===
+                  item.id
 
-            return (
-              <section
-                key={item.id}
-                className="approvalCard"
-              >
-                <div className="cardHeader">
-                  <div>
-                    <div className="quotationNo">
-                      {
-                        item.quotation_no
-                      }
+                return (
+                  <section
+                    key={
+                      item.id
+                    }
+                    className="approvalCard"
+                  >
+                    <div className="cardHeader">
+                      <div>
+                        <div className="quotationNo">
+                          {
+                            item.quotation_no
+                          }
+                        </div>
+
+                        <div className="dateText">
+                          {formatDate(
+                            item.quotation_date
+                          )}
+                        </div>
+                      </div>
+
+                      <StatusBadge
+                        status={
+                          item.status ||
+                          'draft'
+                        }
+                      />
                     </div>
 
-                    <div className="dateText">
-                      {formatDate(
-                        item.quotation_date
+                    <div className="projectName">
+                      {item.project_name ||
+                        'Untitled Project'}
+                    </div>
+
+                    <div className="customerName">
+                      {item.customer_name ||
+                        'No Customer'}
+                    </div>
+
+                    <div className="costGrid">
+                      <InfoItem
+                        label="Total Cost"
+                        value={formatRM(
+                          item.total_cost
+                        )}
+                      />
+
+                      <InfoItem
+                        label="Selling"
+                        value={formatRM(
+                          item.selling_price
+                        )}
+                      />
+
+                      <InfoItem
+                        label="Margin"
+                        value={`${Number(
+                          item.gross_margin ||
+                            0
+                        ).toFixed(
+                          1
+                        )}%`}
+                      />
+                    </div>
+
+                    {status ===
+                      'rejected' &&
+                      item.rejection_reason && (
+                        <div className="reasonBox">
+                          <div className="reasonLabel">
+                            Rejection Reason
+                          </div>
+
+                          <div className="reasonText">
+                            {
+                              item.rejection_reason
+                            }
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="actions">
+                      <Link
+                        href={`/quotations/${item.id}`}
+                        className="viewButton"
+                      >
+                        View
+                      </Link>
+
+                      {status ===
+                        'pending' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={
+                              processing
+                            }
+                            onClick={() =>
+                              approveQuotation(
+                                item
+                              )
+                            }
+                            className="approveButton"
+                          >
+                            {processing
+                              ? 'Processing...'
+                              : 'Approve'}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              processing
+                            }
+                            onClick={() =>
+                              rejectQuotation(
+                                item
+                              )
+                            }
+                            className="rejectButton"
+                          >
+                            Reject
+                          </button>
+                        </>
                       )}
                     </div>
-                  </div>
-
-                  <StatusBadge
-                    status={
-                      item.status ||
-                      'draft'
-                    }
-                  />
-                </div>
-
-                <div className="projectName">
-                  {item.project_name ||
-                    'Untitled Project'}
-                </div>
-
-                <div className="customerName">
-                  {item.customer_name ||
-                    'No Customer'}
-                </div>
-
-                <div className="costGrid">
-                  <InfoItem
-                    label="Total Cost"
-                    value={formatRM(
-                      item.total_cost
-                    )}
-                  />
-
-                  <InfoItem
-                    label="Selling"
-                    value={formatRM(
-                      item.selling_price
-                    )}
-                  />
-
-                  <InfoItem
-                    label="Margin"
-                    value={`${Number(
-                      item.gross_margin ||
-                        0
-                    ).toFixed(
-                      1
-                    )}%`}
-                  />
-                </div>
-
-                {status ===
-                  'rejected' &&
-                  item.rejection_reason && (
-                    <div className="reasonBox">
-                      <div className="reasonLabel">
-                        Rejection Reason
-                      </div>
-
-                      <div className="reasonText">
-                        {
-                          item.rejection_reason
-                        }
-                      </div>
-                    </div>
-                  )}
-
-                <div className="actions">
-                  <Link
-                    href={`/quotations/${item.id}`}
-                    className="viewButton"
-                  >
-                    View
-                  </Link>
-
-                  {status ===
-                    'pending' && (
-                    <>
-                      <button
-                        type="button"
-                        disabled={
-                          processing
-                        }
-                        onClick={() =>
-                          approveQuotation(
-                            item
-                          )
-                        }
-                        className="approveButton"
-                      >
-                        {processing
-                          ? 'Processing...'
-                          : 'Approve'}
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={
-                          processing
-                        }
-                        onClick={() =>
-                          rejectQuotation(
-                            item
-                          )
-                        }
-                        className="rejectButton"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                </div>
-              </section>
-            )
-          }
+                  </section>
+                )
+              }
+            )}
+          </div>
         )}
 
       <style jsx global>{`
@@ -679,8 +692,9 @@ export default function ApprovalsPage() {
         body {
           margin: 0;
           padding: 0;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background: var(--mj-background);
+          color: var(--mj-text);
+          font-family: Arial, Helvetica, sans-serif;
         }
 
         .page {
@@ -702,26 +716,29 @@ export default function ApprovalsPage() {
           height: 42px;
           border-radius: 12px;
           background: white;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--mj-border);
           display: flex;
           align-items: center;
           justify-content: center;
           text-decoration: none;
-          color: #0f766e;
+          color: var(--mj-primary);
           font-size: 24px;
           font-weight: 800;
+          box-shadow:
+            0 5px 15px
+            rgba(7, 89, 133, 0.06);
         }
 
         .topTitle {
           font-size: 24px;
           font-weight: 800;
-          color: #111827;
+          color: var(--mj-text);
         }
 
         .topSubtitle {
           margin-top: 3px;
           font-size: 13px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         .summaryRow {
@@ -734,77 +751,130 @@ export default function ApprovalsPage() {
 
         .summaryCard {
           background: white;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           border-radius: 16px;
           padding: 14px;
+          box-shadow:
+            0 8px 22px
+            rgba(7, 89, 133, 0.045);
         }
 
         .summaryLabel {
-          color: #6b7280;
+          color: var(--mj-muted);
           font-size: 12px;
         }
 
         .summaryValue {
-          margin-top: 4px;
-          font-size: 23px;
+          margin-top: 5px;
+          font-size: 25px;
           font-weight: 800;
+          color: var(--mj-primary-deep);
+        }
+
+        .summaryPending {
+          border-top:
+            4px solid #f59e0b;
+        }
+
+        .summaryApproved {
+          border-top:
+            4px solid #22c55e;
+        }
+
+        .summaryRejected {
+          border-top:
+            4px solid #ef4444;
         }
 
         .filterCard {
           display: grid;
           grid-template-columns:
-            1fr 180px auto;
+            minmax(0, 1fr)
+            180px
+            auto;
           gap: 10px;
           padding: 14px;
           background: white;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           border-radius: 16px;
           margin-bottom: 16px;
+          box-shadow:
+            0 8px 22px
+            rgba(7, 89, 133, 0.04);
         }
 
         .searchInput,
         .statusSelect {
           width: 100%;
+          min-width: 0;
           padding: 11px 12px;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--mj-border);
           border-radius: 10px;
           background: white;
+          color: var(--mj-text);
           font-size: 14px;
+          outline: none;
+        }
+
+        .searchInput:focus,
+        .statusSelect:focus {
+          border-color: var(--mj-primary);
+          box-shadow:
+            0 0 0 3px
+            rgba(7, 152, 212, 0.1);
         }
 
         .refreshButton {
           border: none;
           border-radius: 10px;
-          background: #0f766e;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
           color: white;
           padding: 0 14px;
           font-weight: 700;
           cursor: pointer;
         }
 
+        .approvalList {
+          display: grid;
+          gap: 12px;
+        }
+
         .approvalCard {
-          background: white;
-          border: 1px solid #e8ecf1;
+          background:
+            linear-gradient(
+              145deg,
+              #ffffff,
+              #f7fbfe
+            );
+          border: 1px solid var(--mj-border);
           border-radius: 18px;
           padding: 16px;
-          margin-bottom: 12px;
+          box-shadow:
+            0 8px 24px
+            rgba(7, 89, 133, 0.045);
         }
 
         .cardHeader {
           display: flex;
           justify-content: space-between;
+          align-items: flex-start;
           gap: 12px;
         }
 
         .quotationNo {
           font-size: 17px;
           font-weight: 800;
-          color: #0f766e;
+          color: var(--mj-primary-deep);
         }
 
         .dateText {
           margin-top: 3px;
-          color: #9ca3af;
+          color: #94a3b8;
           font-size: 11px;
         }
 
@@ -812,11 +882,12 @@ export default function ApprovalsPage() {
           margin-top: 14px;
           font-size: 18px;
           font-weight: 800;
+          color: var(--mj-text);
         }
 
         .customerName {
           margin-top: 4px;
-          color: #6b7280;
+          color: var(--mj-muted);
           font-size: 13px;
         }
 
@@ -826,20 +897,22 @@ export default function ApprovalsPage() {
             repeat(3, minmax(0, 1fr));
           gap: 8px;
           margin-top: 14px;
-          background: #f8fafc;
+          background: var(--mj-light);
           padding: 10px;
           border-radius: 12px;
         }
 
         .infoLabel {
           font-size: 10px;
-          color: #9ca3af;
+          color: #7c8a99;
         }
 
         .infoValue {
           margin-top: 4px;
           font-size: 13px;
           font-weight: 800;
+          color: var(--mj-primary-deep);
+          word-break: break-word;
         }
 
         .reasonBox {
@@ -861,6 +934,7 @@ export default function ApprovalsPage() {
           color: #881337;
           font-size: 13px;
           line-height: 1.5;
+          white-space: pre-wrap;
         }
 
         .actions {
@@ -885,9 +959,14 @@ export default function ApprovalsPage() {
         }
 
         .viewButton {
-          background: white;
-          border: 1px solid #d1d5db;
-          color: #374151;
+          background:
+            linear-gradient(
+              135deg,
+              var(--mj-primary),
+              var(--mj-primary-dark)
+            );
+          border: 1px solid var(--mj-primary);
+          color: white;
         }
 
         .approveButton {
@@ -902,6 +981,12 @@ export default function ApprovalsPage() {
           color: #991b1b;
         }
 
+        .approveButton:disabled,
+        .rejectButton:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
         .statusBadge {
           display: inline-flex;
           height: fit-content;
@@ -913,23 +998,23 @@ export default function ApprovalsPage() {
         }
 
         .statusDraft {
-          background: #f3f4f6;
-          color: #4b5563;
+          background: var(--status-draft-bg);
+          color: var(--status-draft-text);
         }
 
         .statusPending {
-          background: #fef3c7;
-          color: #92400e;
+          background: var(--status-pending-bg);
+          color: var(--status-pending-text);
         }
 
         .statusApproved {
-          background: #dcfce7;
-          color: #166534;
+          background: var(--status-approved-bg);
+          color: var(--status-approved-text);
         }
 
         .statusRejected {
-          background: #fee2e2;
-          color: #991b1b;
+          background: var(--status-rejected-bg);
+          color: var(--status-rejected-text);
         }
 
         .errorBox,
@@ -954,9 +1039,9 @@ export default function ApprovalsPage() {
         .emptyCard {
           padding: 20px;
           background: white;
-          border: 1px solid #e8ecf1;
+          border: 1px solid var(--mj-border);
           border-radius: 16px;
-          color: #6b7280;
+          color: var(--mj-muted);
         }
 
         @media (max-width: 650px) {
@@ -974,6 +1059,15 @@ export default function ApprovalsPage() {
 
           .actions {
             flex-direction: column;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .page {
+            padding:
+              14px
+              12px
+              40px;
           }
         }
       `}</style>
@@ -1017,12 +1111,26 @@ function StatusBadge({
 function SummaryCard({
   label,
   value,
+  tone,
 }: {
   label: string
   value: number
+  tone:
+    | 'pending'
+    | 'approved'
+    | 'rejected'
 }) {
+  const toneClass =
+    tone === 'pending'
+      ? 'summaryPending'
+      : tone === 'approved'
+      ? 'summaryApproved'
+      : 'summaryRejected'
+
   return (
-    <div className="summaryCard">
+    <div
+      className={`summaryCard ${toneClass}`}
+    >
       <div className="summaryLabel">
         {label}
       </div>

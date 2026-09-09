@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+
 import { supabase } from '../../lib/supabase'
+
 import {
   getCurrentProfile,
   type UserProfile,
@@ -12,155 +14,83 @@ import {
   canViewActivity,
 } from '../../lib/authRole'
 
+type DashboardStats = {
+  totalCostings: number
+  pending: number
+  materials: number
+  drafts: number
+}
+
 type ActivityLog = {
   id: string
+  quotation_id: string | null
   quotation_no: string | null
-  action: string
+  action: string | null
   details: string | null
   performed_by: string | null
   created_at: string
 }
 
-type ApprovalItem = {
-  id: string
-  quotation_no: string
-  customer_name: string | null
-  project_name: string | null
-  status: string | null
-  created_at: string
-}
+export default function DashboardPage() {
+  const [profile, setProfile] =
+    useState<UserProfile | null>(null)
 
-const allQuickMenus = [
-  {
-    key: 'calculator',
-    title: 'Cost Calculator',
-    subtitle: 'Create costing',
-    icon: '🧮',
-    href: '/calculator',
-    bg: '#E8F7EE',
-    iconBg: '#22C55E',
-  },
-  {
-    key: 'materials',
-    title: 'Material Setup',
-    subtitle: 'Manage materials',
-    icon: '📦',
-    href: '/materials',
-    bg: '#EEF4FF',
-    iconBg: '#3B82F6',
-  },
-  {
-    key: 'cost-listings',
-    title: 'Cost Listings',
-    subtitle: 'View saved costings',
-    icon: '📋',
-    href: '/cost-listings',
-    bg: '#FFF4E8',
-    iconBg: '#F97316',
-  },
-  {
-    key: 'approvals',
-    title: 'Approval Status',
-    subtitle: 'Pending / Approved',
-    icon: '✅',
-    href: '/approvals',
-    bg: '#F3E8FF',
-    iconBg: '#A855F7',
-  },
-  {
-    key: 'activity',
-    title: 'Activity Log',
-    subtitle: 'Recent system actions',
-    icon: '🕘',
-    href: '/activity',
-    bg: '#FFF1F2',
-    iconBg: '#E11D48',
-  },
-  {
-    key: 'profile',
-    title: 'User Profile',
-    subtitle: 'Account information',
-    icon: '👤',
-    href: '/profile',
-    bg: '#ECFEFF',
-    iconBg: '#0891B2',
-  },
-]
+  const [stats, setStats] =
+    useState<DashboardStats>({
+      totalCostings: 0,
+      pending: 0,
+      materials: 0,
+      drafts: 0,
+    })
 
-export default function HomePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [recentActivity, setRecentActivity] =
+    useState<ActivityLog[]>([])
 
-  const [totalCostings, setTotalCostings] = useState(0)
-  const [pendingCount, setPendingCount] = useState(0)
-  const [materialsCount, setMaterialsCount] = useState(0)
-  const [draftCount, setDraftCount] = useState(0)
+  const [loading, setLoading] =
+    useState(true)
 
-  const [activities, setActivities] = useState<ActivityLog[]>([])
-  const [approvals, setApprovals] = useState<ApprovalItem[]>([])
-
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [errorMessage, setErrorMessage] =
+    useState('')
 
   useEffect(() => {
-    loadPage()
+    loadDashboard()
   }, [])
 
-  async function loadPage() {
+  async function loadDashboard() {
     setLoading(true)
     setErrorMessage('')
 
     try {
-      const userProfile = await getCurrentProfile()
+      const currentProfile =
+        await getCurrentProfile()
 
-      if (!userProfile) {
-        throw new Error('Unable to load user profile.')
+      setProfile(currentProfile)
+
+      if (!currentProfile) {
+        setErrorMessage(
+          'Unable to load user profile.'
+        )
+        return
       }
 
-      setProfile(userProfile)
-
       const [
-        totalResult,
-        pendingResult,
-        materialsResult,
-        draftResult,
+        quotationResult,
+        materialResult,
         activityResult,
-        approvalResult,
       ] = await Promise.all([
         supabase
           .from('quotations')
-          .select('*', {
-            count: 'exact',
-            head: true,
-          }),
-
-        supabase
-          .from('quotations')
-          .select('*', {
-            count: 'exact',
-            head: true,
-          })
-          .eq('status', 'pending'),
+          .select('status'),
 
         supabase
           .from('materials')
-          .select('*', {
-            count: 'exact',
-            head: true,
-          })
-          .eq('is_active', true),
-
-        supabase
-          .from('quotations')
-          .select('*', {
-            count: 'exact',
-            head: true,
-          })
-          .eq('status', 'draft'),
+          .select('id, is_active'),
 
         supabase
           .from('quotation_logs')
           .select(`
             id,
+            quotation_id,
             quotation_no,
             action,
             details,
@@ -170,461 +100,335 @@ export default function HomePage() {
           .order('created_at', {
             ascending: false,
           })
-          .limit(3),
-
-        supabase
-          .from('quotations')
-          .select(`
-            id,
-            quotation_no,
-            customer_name,
-            project_name,
-            status,
-            created_at
-          `)
-          .in('status', ['pending', 'approved'])
-          .order('created_at', {
-            ascending: false,
-          })
-          .limit(2),
+          .limit(5),
       ])
 
-      if (totalResult.error) throw totalResult.error
-      if (pendingResult.error) throw pendingResult.error
-      if (materialsResult.error) throw materialsResult.error
-      if (draftResult.error) throw draftResult.error
-      if (activityResult.error) throw activityResult.error
-      if (approvalResult.error) throw approvalResult.error
+      if (quotationResult.error) {
+        throw quotationResult.error
+      }
 
-      setTotalCostings(totalResult.count || 0)
-      setPendingCount(pendingResult.count || 0)
-      setMaterialsCount(materialsResult.count || 0)
-      setDraftCount(draftResult.count || 0)
+      if (materialResult.error) {
+        throw materialResult.error
+      }
 
-      setActivities(activityResult.data || [])
-      setApprovals(approvalResult.data || [])
+      if (activityResult.error) {
+        console.error(
+          'Activity load error:',
+          activityResult.error
+        )
+      }
+
+      const quotations =
+        quotationResult.data || []
+
+      const materials =
+        materialResult.data || []
+
+      const totalCostings =
+        quotations.length
+
+      const pending =
+        quotations.filter(
+          (item) =>
+            String(
+              item.status || ''
+            ).toLowerCase() ===
+            'pending'
+        ).length
+
+      const drafts =
+        quotations.filter(
+          (item) =>
+            String(
+              item.status || 'draft'
+            ).toLowerCase() ===
+            'draft'
+        ).length
+
+      const activeMaterials =
+        materials.filter(
+          (item) =>
+            item.is_active !== false
+        ).length
+
+      setStats({
+        totalCostings,
+        pending,
+        materials: activeMaterials,
+        drafts,
+      })
+
+      setRecentActivity(
+        activityResult.data || []
+      )
     } catch (error: any) {
-      console.error('Dashboard load error:', error)
+      console.error(
+        'Dashboard error:',
+        error
+      )
 
       setErrorMessage(
         error?.message ||
-          'Unable to load dashboard data.'
+          'Unable to load dashboard.'
       )
     } finally {
       setLoading(false)
     }
   }
 
-  const quickMenus = useMemo(() => {
-    if (!profile) return []
-
-    return allQuickMenus.filter((item) => {
-      if (item.key === 'calculator') {
-        return canCreateCosting(profile.role)
+  function formatDateTime(
+    value: string
+  ) {
+    return new Date(
+      value
+    ).toLocaleString(
+      'en-MY',
+      {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
       }
-
-      if (item.key === 'materials') {
-        return canManageMaterials(profile.role)
-      }
-
-      if (item.key === 'approvals') {
-        return canApproveCosting(profile.role)
-      }
-
-      if (item.key === 'activity') {
-        return canViewActivity(profile.role)
-      }
-
-      if (item.key === 'cost-listings') {
-        return true
-      }
-
-      if (item.key === 'profile') {
-        return true
-      }
-
-      return false
-    })
-  }, [profile])
-
-  function formatTime(value: string) {
-    return new Date(value).toLocaleTimeString('en-MY', {
-      hour: 'numeric',
-      minute: '2-digit',
-    })
+    )
   }
 
-  function getActivityType(action: string) {
-    const value = String(action || '').toLowerCase()
-
-    if (value === 'delete') return 'delete'
-
-    if (
-      value === 'edit' ||
-      value === 'update'
-    ) {
-      return 'edit'
-    }
-
-    if (
-      value === 'approve' ||
-      value === 'approved'
-    ) {
-      return 'approved'
-    }
-
-    if (value === 'pending') return 'pending'
-    if (value === 'rejected') return 'rejected'
-
-    return 'create'
-  }
-
-  function getActivityLabel(action: string) {
-    const value = String(action || '').toUpperCase()
-
-    if (value === 'CREATE') return 'Created'
-    if (value === 'DELETE') return 'Deleted'
-    if (value === 'EDIT') return 'Edited'
-    if (value === 'UPDATE') return 'Updated'
-    if (value === 'APPROVED') return 'Approved'
-    if (value === 'PENDING') return 'Pending'
-    if (value === 'REJECTED') return 'Rejected'
-
-    return value || 'Action'
-  }
-
-  function roleLabel(role?: string) {
-    if (!role) return ''
-
-    if (role === 'admin') return 'Admin'
-    if (role === 'estimator') return 'Estimator'
-    if (role === 'manager') return 'Manager'
-    if (role === 'viewer') return 'Viewer'
-
-    return role
+  if (loading) {
+    return (
+      <main className="loadingPage">
+        Loading dashboard...
+      </main>
+    )
   }
 
   return (
-    <main className="page">
-      <section className="hero">
-        <div className="heroInner">
-          <div>
-            <div className="welcome">
-              Welcome back
-              {profile?.full_name
-                ? `, ${profile.full_name}`
-                : ''}
-            </div>
-
-            <h1>
-              Event Costing
-            </h1>
-
-            <p className="heroText">
-              Internal costing & approval system
-            </p>
-
-            {profile && (
-              <div className="roleBadge">
-                {roleLabel(profile.role)}
-              </div>
-            )}
+    <main className="dashboardPage">
+      <section className="heroSection">
+        <div className="heroContent">
+          <div className="welcomeText">
+            Welcome back,
+            {' '}
+            {profile?.full_name ||
+              'User'}
           </div>
 
-          <Link
-            href="/profile"
-            className="avatarButton"
-          >
+          <h1>
+            Event Costing
+          </h1>
+
+          <p>
+            Internal costing & approval system
+          </p>
+
+          {profile && (
+            <div className="roleBadge">
+              {profile.role === 'admin'
+                ? 'Admin'
+                : 'Estimator'}
+            </div>
+          )}
+        </div>
+
+        <div className="profileCircle">
+          <span>
             👤
-          </Link>
+          </span>
         </div>
       </section>
 
-      <section className="summarySection">
-        <div className="summaryGrid">
-          <SummaryCard
-            title="Costings"
-            value={
-              loading
-                ? '...'
-                : String(totalCostings)
-            }
-            sub="Total records"
-          />
+      <section className="statsGrid">
+        <StatCard
+          title="Costings"
+          value={stats.totalCostings}
+          subtitle="Total records"
+        />
 
-          <SummaryCard
-            title="Pending"
-            value={
-              loading
-                ? '...'
-                : String(pendingCount)
-            }
-            sub="Need approval"
-          />
+        <StatCard
+          title="Pending"
+          value={stats.pending}
+          subtitle="Need approval"
+        />
 
-          <SummaryCard
-            title="Materials"
-            value={
-              loading
-                ? '...'
-                : String(materialsCount)
-            }
-            sub="Active"
-          />
+        <StatCard
+          title="Materials"
+          value={stats.materials}
+          subtitle="Active"
+        />
 
-          <SummaryCard
-            title="Drafts"
-            value={
-              loading
-                ? '...'
-                : String(draftCount)
-            }
-            sub="In progress"
-          />
-        </div>
+        <StatCard
+          title="Drafts"
+          value={stats.drafts}
+          subtitle="In progress"
+        />
       </section>
 
       {errorMessage && (
-        <section className="section">
-          <div className="errorBox">
-            <span>
-              {errorMessage}
-            </span>
-
-            <button
-              type="button"
-              onClick={loadPage}
-              className="retryButton"
-            >
-              Retry
-            </button>
-          </div>
-        </section>
+        <div className="errorBox">
+          {errorMessage}
+        </div>
       )}
 
-      <section className="section">
-        <div className="sectionHeader">
-          <div>
-            <h2>
-              Quick Access
-            </h2>
+      <section className="quickSection">
+        <h2>
+          Quick Access
+        </h2>
 
-            <p>
-              Available modules for your role
-            </p>
-          </div>
-        </div>
+        <p>
+          Available modules for your role
+        </p>
 
         <div className="quickGrid">
-          {quickMenus.map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className="quickCard"
-              style={{
-                background: item.bg,
-              }}
-            >
-              <div
-                className="quickIcon"
-                style={{
-                  background: item.iconBg,
-                }}
-              >
-                {item.icon}
-              </div>
+          {profile &&
+            canCreateCosting(
+              profile.role
+            ) && (
+              <QuickCard
+                href="/calculator"
+                icon="🧮"
+                title="Cost Calculator"
+                subtitle="Create costing"
+                tone="blue"
+              />
+            )}
 
-              <div className="quickTitle">
-                {item.title}
-              </div>
+          {profile &&
+            canManageMaterials(
+              profile.role
+            ) && (
+              <QuickCard
+                href="/materials"
+                icon="📦"
+                title="Material Setup"
+                subtitle="Manage material pricing"
+                tone="lightBlue"
+              />
+            )}
 
-              <div className="quickSubtitle">
-                {item.subtitle}
-              </div>
-            </Link>
-          ))}
+          <QuickCard
+            href="/cost-listings"
+            icon="📋"
+            title="Cost Listings"
+            subtitle="View saved costings"
+            tone="sky"
+          />
+
+          {profile &&
+            canApproveCosting(
+              profile.role
+            ) && (
+              <QuickCard
+                href="/approvals"
+                icon="✅"
+                title="Approval"
+                subtitle="Review pending costings"
+                tone="indigo"
+              />
+            )}
+
+          {profile &&
+            canViewActivity(
+              profile.role
+            ) && (
+              <QuickCard
+                href="/activity"
+                icon="🕘"
+                title="Activity Log"
+                subtitle="View costing history"
+                tone="softBlue"
+              />
+            )}
+
+          <QuickCard
+            href="/profile"
+            icon="👤"
+            title="User Profile"
+            subtitle="Account information"
+            tone="paleBlue"
+          />
         </div>
       </section>
 
       {profile &&
-        canViewActivity(profile.role) && (
-          <section className="section">
-            <div className="card">
-              <div className="sectionHeader rowHeader">
-                <div>
-                  <h2>
-                    Recent Activity
-                  </h2>
+        canViewActivity(
+          profile.role
+        ) && (
+          <section className="activitySection">
+            <div className="sectionHeader">
+              <div>
+                <h2>
+                  Recent Activity
+                </h2>
 
-                  <p>
-                    Latest system actions
-                  </p>
-                </div>
-
-                <Link
-                  href="/activity"
-                  className="viewAll"
-                >
-                  View all
-                </Link>
+                <p>
+                  Latest costing actions
+                </p>
               </div>
 
-              {loading && (
-                <div className="emptyState">
-                  Loading activity...
-                </div>
-              )}
+              <Link
+                href="/activity"
+                className="viewAllLink"
+              >
+                View All
+              </Link>
+            </div>
 
-              {!loading &&
-                activities.length === 0 && (
-                  <div className="emptyState">
-                    No recent activity.
-                  </div>
-                )}
+            {recentActivity.length ===
+            0 ? (
+              <div className="emptyActivity">
+                No activity yet.
+              </div>
+            ) : (
+              <div className="activityList">
+                {recentActivity.map(
+                  (item) => (
+                    <div
+                      key={item.id}
+                      className="activityItem"
+                    >
+                      <div className="activityIcon">
+                        <ActivityIcon
+                          action={
+                            item.action ||
+                            ''
+                          }
+                        />
+                      </div>
 
-              {!loading &&
-                activities.length > 0 && (
-                  <div className="activityList">
-                    {activities.map((item) => {
-                      const type =
-                        getActivityType(
-                          item.action
-                        )
+                      <div className="activityContent">
+                        <div className="activityTop">
+                          <strong>
+                            {item.quotation_no ||
+                              '-'}
+                          </strong>
 
-                      return (
-                        <div
-                          key={item.id}
-                          className="activityRow"
-                        >
-                          <div className="activityLeft">
-                            <span
-                              className={`badge badge-${type}`}
-                            >
-                              {getActivityLabel(
-                                item.action
-                              )}
-                            </span>
-
-                            <div className="activityContent">
-                              <strong>
-                                {item.quotation_no ||
-                                  '-'}
-                              </strong>
-
-                              <span>
-                                {item.details ||
-                                  '-'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="activityTime">
-                            {formatTime(
+                          <span>
+                            {formatDateTime(
                               item.created_at
                             )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-            </div>
-          </section>
-        )}
-
-      {profile &&
-        canApproveCosting(profile.role) && (
-          <section className="section bottomSection">
-            <div className="card">
-              <div className="sectionHeader rowHeader">
-                <div>
-                  <h2>
-                    Approval Status
-                  </h2>
-
-                  <p>
-                    Latest approval progress
-                  </p>
-                </div>
-
-                <Link
-                  href="/approvals"
-                  className="viewAll"
-                >
-                  View all
-                </Link>
-              </div>
-
-              {loading && (
-                <div className="emptyState">
-                  Loading approvals...
-                </div>
-              )}
-
-              {!loading &&
-                approvals.length === 0 && (
-                  <div className="emptyState">
-                    No pending or approved costings yet.
-                  </div>
-                )}
-
-              {!loading &&
-                approvals.length > 0 && (
-                  <div className="approvalList">
-                    {approvals.map((item) => {
-                      const status =
-                        String(
-                          item.status ||
-                            'pending'
-                        ).toLowerCase()
-
-                      const approved =
-                        status ===
-                        'approved'
-
-                      const color =
-                        approved
-                          ? '#10B981'
-                          : '#F59E0B'
-
-                      return (
-                        <div
-                          key={item.id}
-                          className="approvalRow"
-                        >
-                          <div className="approvalInfo">
-                            <div className="approvalCode">
-                              {item.quotation_no}
-                            </div>
-
-                            <div className="approvalProject">
-                              {item.customer_name
-                                ? `${item.customer_name} · `
-                                : ''}
-
-                              {item.project_name ||
-                                '-'}
-                            </div>
-                          </div>
-
-                          <span
-                            className="approvalBadge"
-                            style={{
-                              background:
-                                `${color}22`,
-                              color,
-                            }}
-                          >
-                            {approved
-                              ? 'Approved'
-                              : 'Pending'}
                           </span>
                         </div>
-                      )
-                    })}
-                  </div>
+
+                        <div className="activityAction">
+                          {item.action ||
+                            'ACTION'}
+                        </div>
+
+                        <div className="activityDetails">
+                          {item.details ||
+                            '-'}
+                        </div>
+
+                        <div className="activityUser">
+                          By:
+                          {' '}
+                          {item.performed_by ||
+                            '-'}
+                        </div>
+                      </div>
+                    </div>
+                  )
                 )}
-            </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -637,49 +441,49 @@ export default function HomePage() {
         />
 
         {profile &&
-          canCreateCosting(profile.role) ? (
+          canCreateCosting(
+            profile.role
+          ) && (
             <BottomNavItem
               href="/calculator"
               icon="🧮"
               label="Costing"
             />
+          )}
+
+        {profile &&
+          canManageMaterials(
+            profile.role
+          ) ? (
+            <BottomNavItem
+              href="/materials"
+              icon="📦"
+              label="Material"
+            />
           ) : (
             <BottomNavItem
               href="/cost-listings"
               icon="📋"
-              label="Costings"
+              label="Listings"
             />
           )}
 
         {profile &&
-        canManageMaterials(profile.role) ? (
-          <BottomNavItem
-            href="/materials"
-            icon="📦"
-            label="Material"
-          />
-        ) : (
-          <BottomNavItem
-            href="/cost-listings"
-            icon="📋"
-            label="Listings"
-          />
-        )}
-
-        {profile &&
-        canApproveCosting(profile.role) ? (
-          <BottomNavItem
-            href="/approvals"
-            icon="✅"
-            label="Approval"
-          />
-        ) : (
-          <BottomNavItem
-            href="/cost-listings"
-            icon="📄"
-            label="Records"
-          />
-        )}
+          canApproveCosting(
+            profile.role
+          ) ? (
+            <BottomNavItem
+              href="/approvals"
+              icon="✅"
+              label="Approval"
+            />
+          ) : (
+            <BottomNavItem
+              href="/cost-listings"
+              icon="📄"
+              label="Records"
+            />
+          )}
 
         <BottomNavItem
           href="/profile"
@@ -697,526 +501,1074 @@ export default function HomePage() {
         body {
           margin: 0;
           padding: 0;
-          width: 100%;
-          max-width: 100%;
-          overflow-x: hidden;
-          background: #f4f6fa;
-          font-family: Arial, sans-serif;
+          background: var(--mj-background);
+          color: var(--mj-text);
+          font-family: Arial, Helvetica, sans-serif;
         }
 
         body {
-          padding-bottom: 88px;
+          padding-bottom: 85px;
         }
 
-        a {
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        .page {
+        .loadingPage {
           min-height: 100vh;
-          background: #f4f6fa;
-          padding-bottom: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--mj-background);
+          color: var(--mj-primary);
+          font-size: 15px;
+          font-weight: 700;
         }
 
-        .hero {
+        .dashboardPage {
+          min-height: 100vh;
+          background: var(--mj-background);
+        }
+
+        .heroSection {
+          position: relative;
+          min-height: 360px;
+          padding:
+            48px
+            32px
+            100px;
+
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 20px;
+
           background:
             linear-gradient(
               135deg,
-              #0f766e,
-              #0d9488
+              var(--mj-primary) 0%,
+              var(--mj-primary-dark) 55%,
+              var(--mj-primary-deep) 100%
             );
+
           color: white;
-          padding: 26px 18px 78px;
-          border-bottom-left-radius: 30px;
-          border-bottom-right-radius: 30px;
+
+          border-bottom-left-radius:
+            46px;
+
+          border-bottom-right-radius:
+            46px;
         }
 
-        .heroInner {
-          max-width: 1100px;
-          margin: 0 auto;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 15px;
+        .heroContent {
+          max-width: 620px;
         }
 
-        .welcome {
-          font-size: 13px;
-          opacity: 0.85;
-          margin-bottom: 5px;
+        .welcomeText {
+          font-size: 17px;
+          font-weight: 500;
+          opacity: 0.92;
+          margin-bottom: 8px;
         }
 
-        .hero h1 {
+        .heroSection h1 {
           margin: 0;
-          font-size: 30px;
-          line-height: 1.15;
+          font-size: 42px;
+          line-height: 1.08;
+          font-weight: 500;
+          letter-spacing: -1px;
         }
 
-        .heroText {
-          margin: 8px 0 0;
-          font-size: 14px;
-          opacity: 0.9;
+        .heroSection p {
+          margin:
+            17px 0 0;
+
+          font-size: 18px;
+          line-height: 1.45;
+          max-width: 470px;
+          opacity: 0.92;
         }
 
         .roleBadge {
           display: inline-flex;
-          margin-top: 11px;
-          padding: 5px 10px;
-          border-radius: 999px;
-          background:
-            rgba(255, 255, 255, 0.18);
+          margin-top: 18px;
+
+          padding:
+            10px
+            18px;
+
+          border-radius:
+            999px;
+
           border:
             1px solid
-            rgba(255, 255, 255, 0.25);
-          font-size: 11px;
-          font-weight: 700;
+            rgba(
+              255,
+              255,
+              255,
+              0.42
+            );
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.13
+            );
+
+          color: white;
+
+          font-size:
+            14px;
+
+          font-weight:
+            800;
         }
 
-        .avatarButton {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background:
-            rgba(255, 255, 255, 0.2);
+        .profileCircle {
+          flex:
+            0 0
+            72px;
+
+          width:
+            72px;
+
+          height:
+            72px;
+
+          margin-top:
+            74px;
+
+          border-radius:
+            50%;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
           border:
             1px solid
-            rgba(255, 255, 255, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-          font-size: 22px;
-          flex-shrink: 0;
-        }
+            rgba(
+              255,
+              255,
+              255,
+              0.45
+            );
 
-        .summarySection {
-          max-width: 1100px;
-          margin: -48px auto 0;
-          padding: 0 14px;
-        }
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.16
+            );
 
-        .summaryGrid {
-          display: grid;
-          grid-template-columns:
-            repeat(4, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .summaryCard {
-          background: white;
-          border-radius: 17px;
-          padding: 14px;
-          border: 1px solid #edf0f5;
           box-shadow:
-            0 5px 18px
-            rgba(15, 23, 42, 0.07);
+            0
+            8px
+            22px
+            rgba(
+              0,
+              68,
+              120,
+              0.18
+            );
         }
 
-        .summaryTitle {
-          color: #6b7280;
-          font-size: 12px;
+        .profileCircle span {
+          font-size:
+            38px;
         }
 
-        .summaryValue {
-          margin-top: 5px;
-          font-size: 23px;
-          font-weight: 800;
-          color: #111827;
+        .statsGrid {
+          position: relative;
+
+          margin:
+            -72px
+            auto
+            0;
+
+          z-index:
+            10;
+
+          max-width:
+            1100px;
+
+          padding:
+            0
+            28px;
+
+          display:
+            grid;
+
+          grid-template-columns:
+            repeat(
+              4,
+              minmax(
+                0,
+                1fr
+              )
+            );
+
+          gap:
+            16px;
         }
 
-        .summarySub {
-          margin-top: 4px;
-          color: #9ca3af;
-          font-size: 11px;
+        .statCard {
+          min-height:
+            150px;
+
+          padding:
+            20px;
+
+          border-radius:
+            24px;
+
+          background:
+            white;
+
+          border:
+            1px solid
+            var(--mj-border);
+
+          box-shadow:
+            0
+            14px
+            30px
+            rgba(
+              7,
+              89,
+              133,
+              0.08
+            );
         }
 
-        .section {
-          max-width: 1100px;
-          margin: 22px auto 0;
-          padding: 0 14px;
+        .statTitle {
+          color:
+            var(--mj-muted);
+
+          font-size:
+            15px;
+
+          margin-bottom:
+            14px;
         }
 
-        .bottomSection {
-          padding-bottom: 12px;
+        .statValue {
+          color:
+            var(--mj-text);
+
+          font-size:
+            34px;
+
+          font-weight:
+            800;
+
+          line-height:
+            1;
         }
 
-        .sectionHeader {
-          margin-bottom: 14px;
+        .statSubtitle {
+          margin-top:
+            18px;
+
+          color:
+            #9ca3af;
+
+          font-size:
+            14px;
         }
 
-        .sectionHeader h2 {
-          margin: 0;
-          font-size: 21px;
-          color: #111827;
+        .quickSection,
+        .activitySection {
+          max-width:
+            1100px;
+
+          margin:
+            34px
+            auto
+            0;
+
+          padding:
+            0
+            28px;
         }
 
-        .sectionHeader p {
-          margin: 5px 0 0;
-          font-size: 13px;
-          color: #6b7280;
+        .quickSection h2,
+        .activitySection h2 {
+          margin:
+            0;
+
+          color:
+            var(--mj-text);
+
+          font-size:
+            28px;
+
+          font-weight:
+            500;
         }
 
-        .rowHeader {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-        }
+        .quickSection > p {
+          margin:
+            10px
+            0
+            22px;
 
-        .viewAll {
-          color: #0f766e;
-          text-decoration: none;
-          font-size: 13px;
-          font-weight: 700;
-          white-space: nowrap;
+          color:
+            var(--mj-muted);
+
+          font-size:
+            15px;
         }
 
         .quickGrid {
-          display: grid;
+          display:
+            grid;
+
           grid-template-columns:
-            repeat(3, minmax(0, 1fr));
-          gap: 12px;
+            repeat(
+              3,
+              minmax(
+                0,
+                1fr
+              )
+            );
+
+          gap:
+            16px;
         }
 
         .quickCard {
-          text-decoration: none;
-          color: #111827;
-          border-radius: 20px;
-          padding: 16px;
-          min-height: 145px;
+          min-height:
+            160px;
+
+          border-radius:
+            24px;
+
+          padding:
+            20px;
+
+          text-decoration:
+            none;
+
           border:
-            1px solid rgba(0, 0, 0, 0.04);
+            1px solid
+            var(--mj-border);
+
+          display:
+            flex;
+
+          flex-direction:
+            column;
+
+          justify-content:
+            space-between;
+
+          transition:
+            transform
+            0.18s ease,
+            box-shadow
+            0.18s ease;
+
           box-shadow:
-            0 5px 16px
-            rgba(15, 23, 42, 0.05);
+            0
+            10px
+            26px
+            rgba(
+              7,
+              89,
+              133,
+              0.05
+            );
+        }
+
+        .quickCard:hover {
+          transform:
+            translateY(
+              -2px
+            );
+
+          box-shadow:
+            0
+            16px
+            32px
+            rgba(
+              7,
+              89,
+              133,
+              0.1
+            );
+        }
+
+        .toneBlue {
+          background:
+            linear-gradient(
+              145deg,
+              #dff4fd,
+              #eefaff
+            );
+        }
+
+        .toneLightBlue {
+          background:
+            linear-gradient(
+              145deg,
+              #e9f5ff,
+              #f6fbff
+            );
+        }
+
+        .toneSky {
+          background:
+            linear-gradient(
+              145deg,
+              #e8f7ff,
+              #f7fcff
+            );
+        }
+
+        .toneIndigo {
+          background:
+            linear-gradient(
+              145deg,
+              #edf3ff,
+              #f8faff
+            );
+        }
+
+        .toneSoftBlue {
+          background:
+            linear-gradient(
+              145deg,
+              #eaf7fd,
+              #ffffff
+            );
+        }
+
+        .tonePaleBlue {
+          background:
+            linear-gradient(
+              145deg,
+              #f0f9ff,
+              #ffffff
+            );
         }
 
         .quickIcon {
-          width: 48px;
-          height: 48px;
-          border-radius: 15px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 23px;
-          margin-bottom: 13px;
+          width:
+            54px;
+
+          height:
+            54px;
+
+          border-radius:
+            16px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          background:
+            var(--mj-primary);
+
+          box-shadow:
+            0
+            9px
+            20px
+            rgba(
+              7,
+              152,
+              212,
+              0.22
+            );
+
+          font-size:
+            28px;
         }
 
         .quickTitle {
-          font-weight: 700;
-          font-size: 16px;
-          line-height: 1.25;
+          margin-top:
+            20px;
+
+          color:
+            var(--mj-text);
+
+          font-size:
+            17px;
+
+          font-weight:
+            800;
         }
 
         .quickSubtitle {
-          margin-top: 6px;
-          font-size: 13px;
-          color: #4b5563;
-          line-height: 1.35;
+          margin-top:
+            4px;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            12px;
+
+          line-height:
+            1.4;
         }
 
-        .card {
-          background: white;
-          border-radius: 20px;
-          padding: 18px;
-          border: 1px solid #edf0f5;
-          box-shadow:
-            0 6px 20px
-            rgba(15, 23, 42, 0.05);
+        .activitySection {
+          margin-bottom:
+            30px;
+        }
+
+        .sectionHeader {
+          display:
+            flex;
+
+          align-items:
+            flex-end;
+
+          justify-content:
+            space-between;
+
+          gap:
+            14px;
+
+          margin-bottom:
+            16px;
+        }
+
+        .sectionHeader p {
+          margin:
+            5px 0 0;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            13px;
+        }
+
+        .viewAllLink {
+          text-decoration:
+            none;
+
+          color:
+            var(--mj-primary);
+
+          font-size:
+            13px;
+
+          font-weight:
+            800;
         }
 
         .activityList {
-          display: grid;
+          background:
+            white;
+
+          border:
+            1px solid
+            var(--mj-border);
+
+          border-radius:
+            22px;
+
+          overflow:
+            hidden;
+
+          box-shadow:
+            0
+            10px
+            26px
+            rgba(
+              7,
+              89,
+              133,
+              0.05
+            );
         }
 
-        .activityRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 0;
+        .activityItem {
+          display:
+            flex;
+
+          gap:
+            12px;
+
+          padding:
+            15px;
+
           border-bottom:
-            1px solid #edf0f3;
+            1px solid
+            #edf4f8;
         }
 
-        .activityRow:last-child {
-          border-bottom: none;
+        .activityItem:last-child {
+          border-bottom:
+            none;
         }
 
-        .activityLeft {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          min-width: 0;
-          flex: 1;
+        .activityIcon {
+          flex:
+            0 0
+            42px;
+
+          width:
+            42px;
+
+          height:
+            42px;
+
+          border-radius:
+            13px;
+
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          background:
+            var(--mj-light);
+
+          font-size:
+            21px;
         }
 
         .activityContent {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-          min-width: 0;
+          flex: 1;
+          min-width:
+            0;
         }
 
-        .activityContent strong {
-          font-size: 14px;
-          color: #111827;
+        .activityTop {
+          display:
+            flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            space-between;
+
+          gap:
+            10px;
         }
 
-        .activityContent span {
-          font-size: 12px;
-          color: #6b7280;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 360px;
+        .activityTop strong {
+          color:
+            var(--mj-primary-deep);
+
+          font-size:
+            13px;
         }
 
-        .activityTime {
-          font-size: 11px;
-          color: #9ca3af;
-          white-space: nowrap;
-          flex-shrink: 0;
+        .activityTop span {
+          color:
+            #9ca3af;
+
+          font-size:
+            10px;
+
+          white-space:
+            nowrap;
         }
 
-        .badge {
-          padding: 6px 9px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 700;
-          white-space: nowrap;
+        .activityAction {
+          margin-top:
+            4px;
+
+          color:
+            var(--mj-text);
+
+          font-size:
+            12px;
+
+          font-weight:
+            800;
         }
 
-        .badge-create {
-          background: #dcfce7;
-          color: #166534;
+        .activityDetails {
+          margin-top:
+            3px;
+
+          color:
+            var(--mj-muted);
+
+          font-size:
+            11px;
+
+          line-height:
+            1.4;
+
+          word-break:
+            break-word;
         }
 
-        .badge-delete {
-          background: #fee2e2;
-          color: #991b1b;
+        .activityUser {
+          margin-top:
+            5px;
+
+          color:
+            #9ca3af;
+
+          font-size:
+            10px;
         }
 
-        .badge-edit {
-          background: #dbeafe;
-          color: #1d4ed8;
-        }
+        .emptyActivity {
+          padding:
+            20px;
 
-        .badge-pending {
-          background: #fef3c7;
-          color: #92400e;
-        }
+          background:
+            white;
 
-        .badge-approved {
-          background: #d1fae5;
-          color: #047857;
-        }
-
-        .badge-rejected {
-          background: #fee2e2;
-          color: #b91c1c;
-        }
-
-        .approvalList {
-          display: grid;
-          gap: 10px;
-        }
-
-        .approvalRow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
           border:
-            1px solid #edf0f3;
-          border-radius: 14px;
-          padding: 13px;
-        }
+            1px solid
+            var(--mj-border);
 
-        .approvalInfo {
-          min-width: 0;
-        }
+          border-radius:
+            18px;
 
-        .approvalCode {
-          font-weight: 700;
-          font-size: 14px;
-          color: #111827;
-        }
-
-        .approvalProject {
-          margin-top: 4px;
-          font-size: 12px;
-          color: #6b7280;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .approvalBadge {
-          padding: 6px 10px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 700;
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-
-        .emptyState {
-          color: #9ca3af;
-          font-size: 13px;
-          padding: 10px 0 4px;
+          color:
+            var(--mj-muted);
         }
 
         .errorBox {
-          background: #fee2e2;
-          color: #991b1b;
-          border-radius: 14px;
-          padding: 14px;
-          font-size: 13px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-        }
+          max-width:
+            1044px;
 
-        .retryButton {
-          border: none;
-          background: white;
-          color: #991b1b;
-          padding: 7px 12px;
-          border-radius: 8px;
-          font-weight: 700;
-          cursor: pointer;
+          margin:
+            20px
+            auto
+            0;
+
+          padding:
+            12px
+            16px;
+
+          border-radius:
+            12px;
+
+          background:
+            #fee2e2;
+
+          color:
+            #991b1b;
+
+          font-size:
+            13px;
         }
 
         .bottomNav {
-          position: fixed;
+          position:
+            fixed;
+
           left: 0;
           right: 0;
           bottom: 0;
-          height: 72px;
-          background:
-            rgba(255, 255, 255, 0.97);
-          border-top:
-            1px solid #e5e7eb;
-          display: grid;
+
+          z-index:
+            999;
+
+          min-height:
+            74px;
+
+          display:
+            grid;
+
           grid-template-columns:
-            repeat(5, 1fr);
-          z-index: 999;
-          padding-bottom:
-            env(safe-area-inset-bottom);
+            repeat(
+              5,
+              1fr
+            );
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.97
+            );
+
+          border-top:
+            1px solid
+            var(--mj-border);
+
           box-shadow:
-            0 -4px 18px
-            rgba(15, 23, 42, 0.06);
+            0
+            -5px
+            20px
+            rgba(
+              7,
+              89,
+              133,
+              0.06
+            );
         }
 
         .navItem {
-          text-decoration: none;
-          color: #7b8491;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          font-size: 10px;
-          font-weight: 600;
-          min-width: 0;
+          min-width:
+            0;
+
+          text-decoration:
+            none;
+
+          color:
+            #7b8491;
+
+          display:
+            flex;
+
+          flex-direction:
+            column;
+
+          align-items:
+            center;
+
+          justify-content:
+            center;
+
+          gap:
+            3px;
+
+          padding:
+            8px
+            2px;
+
+          font-size:
+            10px;
+
+          font-weight:
+            700;
         }
 
         .navItemActive {
-          color: #0f766e;
+          color:
+            var(--mj-primary);
         }
 
         .navIcon {
-          font-size: 21px;
-          line-height: 1;
+          font-size:
+            22px;
+
+          line-height:
+            1;
         }
 
-        @media (max-width: 800px) {
-          .summaryGrid {
+        @media (
+          max-width:
+            900px
+        ) {
+          .statsGrid {
             grid-template-columns:
-              repeat(2, minmax(0, 1fr));
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
           }
 
           .quickGrid {
             grid-template-columns:
-              repeat(2, minmax(0, 1fr));
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
           }
         }
 
-        @media (max-width: 600px) {
-          .hero {
+        @media (
+          max-width:
+            650px
+        ) {
+          .heroSection {
+            min-height:
+              360px;
+
             padding:
-              22px 16px 72px;
+              46px
+              30px
+              105px;
           }
 
-          .hero h1 {
-            font-size: 27px;
+          .welcomeText {
+            font-size:
+              16px;
           }
 
-          .summarySection {
-            margin-top: -43px;
+          .heroSection h1 {
+            font-size:
+              38px;
           }
 
-          .summaryCard {
-            padding: 13px;
+          .heroSection p {
+            font-size:
+              17px;
+
+            max-width:
+              300px;
           }
 
-          .summaryValue {
-            font-size: 22px;
+          .profileCircle {
+            width:
+              62px;
+
+            height:
+              62px;
+
+            flex-basis:
+              62px;
+
+            margin-top:
+              72px;
+          }
+
+          .profileCircle span {
+            font-size:
+              32px;
+          }
+
+          .statsGrid {
+            margin-top:
+              -74px;
+
+            padding:
+              0
+              30px;
+
+            gap:
+              14px;
+          }
+
+          .statCard {
+            min-height:
+              150px;
+
+            padding:
+              18px;
+          }
+
+          .statTitle {
+            font-size:
+              15px;
+          }
+
+          .statValue {
+            font-size:
+              34px;
+          }
+
+          .quickSection,
+          .activitySection {
+            padding:
+              0
+              30px;
+          }
+
+          .quickSection {
+            margin-top:
+              32px;
+          }
+
+          .quickSection h2,
+          .activitySection h2 {
+            font-size:
+              27px;
           }
 
           .quickGrid {
-            gap: 10px;
+            gap:
+              14px;
           }
 
           .quickCard {
-            min-height: 138px;
-            padding: 14px;
+            min-height:
+              155px;
+
+            padding:
+              17px;
+
+            border-radius:
+              22px;
           }
 
           .quickIcon {
-            width: 45px;
-            height: 45px;
-            font-size: 21px;
+            width:
+              50px;
+
+            height:
+              50px;
+
+            font-size:
+              25px;
           }
 
           .quickTitle {
-            font-size: 15px;
+            font-size:
+              15px;
+          }
+        }
+
+        @media (
+          max-width:
+            420px
+        ) {
+          .heroSection {
+            padding-left:
+              22px;
+
+            padding-right:
+              22px;
           }
 
-          .quickSubtitle {
-            font-size: 12px;
+          .statsGrid,
+          .quickSection,
+          .activitySection {
+            padding-left:
+              20px;
+
+            padding-right:
+              20px;
           }
 
-          .activityRow {
-            align-items:
-              flex-start;
-            flex-wrap: wrap;
+          .statCard {
+            min-height:
+              138px;
+
+            padding:
+              16px;
           }
 
-          .activityLeft {
-            align-items:
-              flex-start;
-            width: 100%;
+          .statValue {
+            font-size:
+              30px;
           }
 
-          .activityContent {
-            flex: 1;
-          }
-
-          .activityContent span {
-            max-width: 180px;
-          }
-
-          .activityTime {
-            width: 100%;
-            text-align: right;
-            font-size: 10px;
-          }
-
-          .badge {
-            font-size: 10px;
-            padding: 5px 7px;
+          .quickGrid {
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
           }
         }
       `}</style>
@@ -1224,30 +1576,131 @@ export default function HomePage() {
   )
 }
 
-function SummaryCard({
+function StatCard({
   title,
   value,
-  sub,
+  subtitle,
 }: {
   title: string
-  value: string
-  sub: string
+  value: number
+  subtitle: string
 }) {
   return (
-    <div className="summaryCard">
-      <div className="summaryTitle">
+    <div className="statCard">
+      <div className="statTitle">
         {title}
       </div>
 
-      <div className="summaryValue">
+      <div className="statValue">
         {value}
       </div>
 
-      <div className="summarySub">
-        {sub}
+      <div className="statSubtitle">
+        {subtitle}
       </div>
     </div>
   )
+}
+
+function QuickCard({
+  href,
+  icon,
+  title,
+  subtitle,
+  tone,
+}: {
+  href: string
+  icon: string
+  title: string
+  subtitle: string
+  tone:
+    | 'blue'
+    | 'lightBlue'
+    | 'sky'
+    | 'indigo'
+    | 'softBlue'
+    | 'paleBlue'
+}) {
+  const toneClass =
+    tone === 'blue'
+      ? 'toneBlue'
+      : tone === 'lightBlue'
+      ? 'toneLightBlue'
+      : tone === 'sky'
+      ? 'toneSky'
+      : tone === 'indigo'
+      ? 'toneIndigo'
+      : tone === 'softBlue'
+      ? 'toneSoftBlue'
+      : 'tonePaleBlue'
+
+  return (
+    <Link
+      href={href}
+      className={`quickCard ${toneClass}`}
+    >
+      <div className="quickIcon">
+        {icon}
+      </div>
+
+      <div>
+        <div className="quickTitle">
+          {title}
+        </div>
+
+        <div className="quickSubtitle">
+          {subtitle}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function ActivityIcon({
+  action,
+}: {
+  action: string
+}) {
+  const value =
+    action.toLowerCase()
+
+  if (
+    value === 'create'
+  ) {
+    return <>＋</>
+  }
+
+  if (
+    value === 'edit'
+  ) {
+    return <>✏️</>
+  }
+
+  if (
+    value === 'submit'
+  ) {
+    return <>📤</>
+  }
+
+  if (
+    value === 'approve'
+  ) {
+    return <>✅</>
+  }
+
+  if (
+    value === 'reject'
+  ) {
+    return <>❌</>
+  }
+
+  if (
+    value === 'delete'
+  ) {
+    return <>🗑️</>
+  }
+
+  return <>🕘</>
 }
 
 function BottomNavItem({
